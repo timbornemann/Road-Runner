@@ -1,4 +1,4 @@
-FROM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /web
 COPY frontend/package*.json ./
 RUN npm ci
@@ -17,4 +17,5 @@ COPY backend/ backend/
 COPY --from=web /web/dist /app/frontend/dist
 USER runner
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3)"]
 CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8080"]
