@@ -24,6 +24,79 @@ Beim ersten Start erscheint die gekennzeichnete Beispielreise **Dolomiten-Roadtr
 - **Tags** lassen sich in den Eingabeformularen mit Komma trennen oder aus Vorschlägen wählen. Jede Liste bietet Tagfilter und Gruppierung. Anschaffungen und Fahrten teilen ihre Tags mit der Finanzbuchung. Beim Einkauf übernimmt der Vorrat die Artikel-Tags und der Bon erhält die Tags der gekauften Artikel.
 - **Reise exportieren** lädt eine vollständige Reise als JSON-Datei im Exportformat 3 herunter. Sie enthält die Routenfolge mit allen Varianten, flexible Termine, Tags, verknüpfte Einkäufe und Ausgaben sowie Tagebucheinträge, Lieblingsplätze und die zugehörigen Mediendateien. Viele Videos vergrößern den Download. Für eine Sicherung aller Reisen verwende den Datenbanksnapshot weiter unten.
 
+## Mit Codex oder einem anderen KI-Agenten planen
+
+Road-Runner bietet einen optionalen MCP-Server über Streamable HTTP am Pfad `/mcp`. Damit kann ein Agent vorhandene Reisen lesen, Reisen anlegen und Routen, Einkäufe, Budget und Tagebuch gemeinsam mit dir pflegen. Er arbeitet direkt mit den Daten der Weboberfläche. Bei aktiviertem Schreibzugriff aktualisiert eine offene Reiseansicht Änderungen innerhalb weniger Sekunden.
+
+### Server einschalten
+
+MCP ist standardmäßig ausgeschaltet. Erzeuge einmal ein zufälliges Token mit Python auf dem Host.
+
+```sh
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Alternativ kannst du es in einem vorhandenen Road-Runner-Container erzeugen.
+
+```sh
+docker exec road-runner python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Ergänze für **Docker Compose** diese Zeilen in der lokalen `.env` neben `compose.yaml`. Ersetze den Platzhalter durch das erzeugte Token. Für einen Agenten, der nur nachschlägt und Vorschläge formuliert, setze `RR_MCP_READ_ONLY=true`.
+
+```dotenv
+RR_MCP_ENABLED=true
+RR_MCP_TOKEN=<dein-zufälliges-Token>
+RR_MCP_READ_ONLY=false
+```
+
+Verwende ein Image mit MCP-Unterstützung. Für den **aktuellen Quellstand** baue das Image und ergänze `ROAD_RUNNER_IMAGE=road-runner:dev` in derselben `.env`. Starte Compose aus dem bisherigen Projektverzeichnis, damit dieselben Reisedaten eingebunden werden.
+
+```sh
+docker build -t road-runner:dev .
+docker compose up -d
+```
+
+Bei **`docker run`** kannst du dieselben drei MCP-Einstellungen über `--env-file .env` mitgeben. Der folgende Einzeiler startet einen neuen Container mit dem lokal gebauten Image. Beim Ersetzen einer bestehenden Installation übernimm ihren bisherigen Volumenamen und Host-Port.
+
+```sh
+docker run --name road-runner -d --restart unless-stopped -p 8080:8080 -e TZ=Europe/Berlin --env-file .env -v road-runner_reisedaten:/data road-runner:dev
+```
+
+### Agent verbinden
+
+Öffne **KI-Agent verbinden** in der Seitenleiste. Dort findest du den aktuellen Zugriffsmodus, die Adresse und den kopierbaren Codex-Befehl für den verwendeten Host und Port.
+
+Setze auf dem **Gerät mit Codex** die Umgebungsvariable `RR_MCP_TOKEN` auf denselben Wert wie im Container. In PowerShell kannst du das Token verdeckt für die aktuelle Sitzung eingeben.
+
+```powershell
+$env:RR_MCP_TOKEN = [System.Net.NetworkCredential]::new('', (Read-Host 'Road-Runner-Token' -AsSecureString)).Password
+```
+
+Unter Bash gilt die Eingabe ebenfalls für die aktuelle Sitzung.
+
+```bash
+read -rs -p 'Road-Runner-Token: ' RR_MCP_TOKEN && export RR_MCP_TOKEN
+```
+
+Registriere den Server einmal. Starte Codex anschließend aus einer Umgebung, die das Token enthält. Bei einer Desktop-App kannst du die Variable in den Benutzer-Umgebungsvariablen hinterlegen und die App neu starten. Auf einem anderen Gerät ersetzt du `localhost:8080` durch die LAN-Adresse und den veröffentlichten Port des Docker-Hosts. [MCP in Codex konfigurieren](https://developers.openai.com/codex/mcp/)
+
+```sh
+codex mcp add road-runner --url http://localhost:8080/mcp --bearer-token-env-var RR_MCP_TOKEN
+```
+
+Andere Clients verwenden die gleiche URL mit dem Transport **Streamable HTTP** und dem Header `Authorization: Bearer <dein-Token>`. Das Token gilt für alle Reisen dieser Installation. Der Lesemodus beschränkt die MCP-Werkzeuge. Für die normale Weboberfläche und deren REST-API gilt weiterhin der Zugriff im vertrauten Netz. Bei Zugriff über öffentliche Netze verwende eine HTTPS-Verbindung über einen entsprechend abgesicherten Host oder ein VPN.
+
+Native Clients wie Codex können den Host per IP oder DNS-Namen ansprechen. Bei Anfragen mit einem Browser-`Origin` akzeptiert der Server denselben Ursprung über `localhost` oder eine IP-Adresse.
+
+**Zum Ausprobieren** eignen sich diese Aufträge.
+
+- „Zeig mir die aktive Route meines Dolomiten-Roadtrips, den nächsten Schlafplatz und das noch freie Budget.“
+- „Lege eine Reise nach Norwegen an. Plane die Lofoten als Etappe mit einer Küsten- und einer Bergvariante. Die Fähre am 18. Juni 2027 gehört zu beiden.“
+- „Setze zwei Packungen Haferflocken auf die Einkaufsliste meiner Norwegenreise.“
+
+Zum Ausschalten setze `RR_MCP_ENABLED=false` und erstelle den Container mit denselben Daten neu. Für einen Tokenwechsel aktualisiere `RR_MCP_TOKEN` auf Server und Agentengerät.
+
 ## Aktualisieren
 
 **Nach dem Schnellstart mit `docker run`** zuerst das neue Image laden. Sobald der Download erfolgreich war, den bisherigen Container stoppen und entfernen.

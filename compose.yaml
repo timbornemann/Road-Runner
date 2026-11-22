@@ -1,9 +1,12 @@
 services:
   road-runner:
-    image: ghcr.io/timbornemann/road-runner:latest
+    image: ${ROAD_RUNNER_IMAGE:-ghcr.io/timbornemann/road-runner:latest}
     restart: unless-stopped
     environment:
       TZ: ${ROAD_RUNNER_TZ:-Europe/Berlin}
+      RR_MCP_ENABLED: ${RR_MCP_ENABLED:-false}
+      RR_MCP_READ_ONLY: ${RR_MCP_READ_ONLY:-false}
+      RR_MCP_TOKEN: ${RR_MCP_TOKEN:-}
     labels:
       com.centurylinklabs.watchtower.enable: "true"
     ports:

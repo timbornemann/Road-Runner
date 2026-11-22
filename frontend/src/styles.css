@@ -224,6 +224,33 @@ svg {
   color: #b9cdbd;
   font-size: 12px;
 }
+.agent-link {
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+}
+.agent-connection {
+  display: grid;
+  gap: 16px;
+}
+.agent-connection p {
+  margin: 0;
+  line-height: 1.55;
+}
+.agent-connection .btn {
+  justify-self: start;
+}
+.agent-connection textarea {
+  font-family: monospace;
+}
+.agent-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  color: var(--forest);
+}
 .connection-dot {
   display: block;
   width: 7px;

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import {
   ArrowDownToLine,
   BookOpen,
+  Cable,
   CalendarDays,
   CarFront,
   Check,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react'
 import '@fontsource-variable/dm-sans/wght.css'
 import './styles.css'
+import { AgentConnection, useAgentConnection } from './AgentConnection'
 import RouteView from './Route'
 import Journal from './Journal'
 import Modules from './Modules'
@@ -61,7 +63,7 @@ function App() {
   const [data, setData] = useState<TripData | null>(null)
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [dialog, setDialog] = useState<'select' | 'edit' | 'new' | null>(null)
+  const [dialog, setDialog] = useState<'select' | 'edit' | 'new' | 'agent' | null>(null)
   const [editTrip, setEditTrip] = useState<Trip>()
   const [drawer, setDrawer] = useState(false)
   const [toast, setToast] = useState('')
@@ -107,6 +109,7 @@ function App() {
     }
   }, [])
   const reload = useCallback(() => load(), [load])
+  const connection = useAgentConnection(reload)
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === 'visible') void load().catch(() => {})
@@ -224,6 +227,16 @@ function App() {
           ))}
         </nav>
         <div className="side-footer">
+          <button
+            className="side-export agent-link"
+            onClick={() => {
+              setDrawer(false)
+              setDialog('agent')
+            }}
+          >
+            <Cable size={17} />
+            KI-Agent verbinden
+          </button>
           {data && (
             <a className="side-export" href={'/api/trips/' + data.trip.id + '/export'} download>
               <ArrowDownToLine size={17} />
@@ -348,6 +361,7 @@ function App() {
           edit={edit}
         />
       )}
+      {dialog === 'agent' && <AgentConnection connection={connection} onClose={() => setDialog(null)} />}
       {(dialog === 'edit' || dialog === 'new') && (
         <TripEditor
           trip={dialog === 'edit' ? editTrip : undefined}
