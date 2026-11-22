@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import type { JournalEntry } from './journal-types'
 
 export interface Trip {
   id: number
@@ -31,6 +32,23 @@ export interface Stop extends Item {
   position: number
   saved: boolean
   done: boolean
+  stage_id: number | null
+  variant_id: number | null
+}
+export interface RouteVariant {
+  id: number
+  stage_id: number
+  name: string
+  notes: string
+}
+export interface RouteStage {
+  id: number
+  trip_id: number
+  name: string
+  notes: string
+  position: number
+  active_variant_id: number | null
+  variants: RouteVariant[]
 }
 export interface Expense extends Item {
   title: string
@@ -91,11 +109,24 @@ export interface ShoppingItem extends PantryItem {
 export interface TripData {
   trip: Trip
   stops: Stop[]
+  stages: RouteStage[]
+  journal_entries: JournalEntry[]
+  favorite_stop_ids: number[]
   purchases: Purchase[]
   shopping: ShoppingItem[]
   mobility: Mobility[]
   expenses: Expense[]
   pantry: PantryItem[]
+}
+
+export function activeRoute({ stages, stops }: TripData): Stop[] {
+  const byId = new Map<number | null, RouteStage>(stages.map((stage) => [stage.id, stage]))
+  const position = (stop: Stop) => byId.get(stop.stage_id)?.position ?? Number.MAX_SAFE_INTEGER
+  return stops
+    .filter((stop) =>
+      !stop.saved && (stop.variant_id === null || stop.variant_id === byId.get(stop.stage_id)?.active_variant_id),
+    )
+    .sort((a, b) => position(a) - position(b) || a.position - b.position || a.id - b.id)
 }
 
 export async function api<T = unknown>(path: string, method = 'GET', body?: unknown): Promise<T> {

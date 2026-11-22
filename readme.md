@@ -17,10 +17,12 @@ Beim ersten Start erscheint die gekennzeichnete Beispielreise **Dolomiten-Roadtr
 ## Reisen planen und unterwegs nutzen
 
 - **Route & Orte** sammelt Ideen auf der Merkliste. In der Routenfolge kannst du Stopps mit offenem Datum, feste Termine und Schlafplätze mischen und umsortieren. Die Karte zeigt die Orte. **Navigation starten** öffnet Google Maps. Kartenkacheln und externe Navigation brauchen Internet. Listen und Formulare funktionieren, solange der Docker-Host erreichbar ist.
+- **Etappen und Varianten** gliedern lange Routen. Lege etwa die Etappe *Lofoten* an und ordne ihr den Fährhafen als gemeinsamen Stopp zu. Die Küstenstraße und die Fahrt durchs Gebirge kannst du als Varianten mit eigenen Orten und Notizen vorbereiten. Beim Wechsel bleiben beide Varianten gespeichert. Die Reiseübersicht verwendet die jeweils aktive Route.
+- **Reisetagebuch** sammelt deine Erinnerungen auf Tagesseiten. Zu einem Eintrag kannst du mehrere Orte verknüpfen sowie Fotos und Videos hinzufügen. Unterstützt werden JPEG, PNG, GIF, WebP, MP4, MOV und WebM mit bis zu 100 MiB je Datei. Bei einem besuchten Stopp kannst du einen Eintrag mit vorausgewähltem Ort beginnen. Auf der Reisekarte findest du besuchte Orte mit Koordinaten. Lieblingsplätze kannst du für spätere Reisen vormerken und dort in die Merkliste übernehmen.
 - **Anschaffungen** hält Mengen und Schätzpreise fest. Beim Abhaken kannst du den Kaufpreis bestätigen. **Vorräte & Einkauf** verwaltet Bestand, Verbrauch und Einkaufslisten je Reise. Beim Einkauf werden die gekauften Teilmengen in den Vorrat übernommen und der Bon einmal gebucht.
 - **Auto & Verkehr** erfasst Tankstopps, Fähren, Bahnfahrten, Maut und Parkkosten. **Finanzen** zeigt bezahlte und geplante Ausgaben sowie das verfügbare Budget. Für Auslandszahlungen erfasst du den Originalbetrag und den Wert einer Einheit der Landeswährung in deiner Basiswährung.
 - **Tags** lassen sich in den Eingabeformularen mit Komma trennen oder aus Vorschlägen wählen. Jede Liste bietet Tagfilter und Gruppierung. Anschaffungen und Fahrten teilen ihre Tags mit der Finanzbuchung. Beim Einkauf übernimmt der Vorrat die Artikel-Tags und der Bon erhält die Tags der gekauften Artikel.
-- **Reise exportieren** lädt eine vollständige Reise als JSON-Datei im Exportformat 2 herunter, einschließlich stabiler IDs, Routenreihenfolge, flexibler Termine, Tags und verknüpfter Einkäufe und Ausgaben. Für eine Sicherung aller Reisen verwende den Datenbanksnapshot weiter unten.
+- **Reise exportieren** lädt eine vollständige Reise als JSON-Datei im Exportformat 3 herunter. Sie enthält die Routenfolge mit allen Varianten, flexible Termine, Tags, verknüpfte Einkäufe und Ausgaben sowie Tagebucheinträge, Lieblingsplätze und die zugehörigen Mediendateien. Viele Videos vergrößern den Download. Für eine Sicherung aller Reisen verwende den Datenbanksnapshot weiter unten.
 
 ## Aktualisieren
 
@@ -67,7 +69,7 @@ volumes:
 
 Die folgenden Befehle verwenden den **Containernamen** `road-runner` aus dem Schnellstart. **Bei Compose** erhältst du die entsprechende Container-ID mit `docker compose ps --all --quiet road-runner`. Setze diese ID bei `exec`, `cp`, `stop`, `--volumes-from` und `start` anstelle des Containernamens ein.
 
-**Sichern.** Bei laufender Anwendung einen konsistenten SQLite-Snapshot erstellen und auf den Host kopieren. Wähle auf dem Host für jede Sicherung einen eigenen Dateinamen.
+**Sichern.** Bei laufender Anwendung einen konsistenten SQLite-Snapshot erstellen und auf den Host kopieren. Er enthält auch die Fotos und Videos aus allen Reisetagebüchern. Wähle auf dem Host für jede Sicherung einen eigenen Dateinamen.
 
 ```sh
 docker exec road-runner python -c "import sqlite3; src=sqlite3.connect('file:/data/road-runner.sqlite3?mode=ro',uri=True); dst=sqlite3.connect('/tmp/road-runner-sicherung.sqlite3'); src.backup(dst); dst.close(); src.close()"
@@ -94,7 +96,7 @@ Für die Entwicklung mit Python 3.13 und Node.js ab 22.12 die folgenden Backend-
 
 ```sh
 python -m pip install -r backend/requirements-test.txt
-python -m unittest -v backend.test_app
+python -m unittest discover -v -s backend -t .
 ```
 
 In `frontend` baut `npm ci` gefolgt von `npm run build` die Oberfläche. Im Projektstamm startet `python -m uvicorn backend.app:app --host 0.0.0.0 --port 8080` die Anwendung. Der Vite-Entwicklungsserver (`npm run dev` in `frontend`) leitet API-Aufrufe an Port 8080 weiter. Die API-Dokumentation liegt unter `/docs`.

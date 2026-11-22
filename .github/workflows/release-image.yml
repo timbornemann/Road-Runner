@@ -25,7 +25,7 @@ jobs:
       - name: Test the travel API and database migrations
         run: |
           python -m pip install -r backend/requirements-test.txt
-          python -m unittest -v backend.test_app
+          python -m unittest discover -v -s backend -t .
 
       - name: Set up ARM emulation
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0

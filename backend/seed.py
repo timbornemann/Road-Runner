@@ -1,6 +1,9 @@
 import datetime as dt
+import hashlib
+import os
+from pathlib import Path
 
-from . import models, store
+from . import journal, journal_media, models, store
 
 
 def seed_demo(con):
@@ -28,14 +31,41 @@ def seed_demo(con):
         ("Cortina d’Ampezzo", "stop", 5, "11:00", 46.5405, 12.1357, "Corso Italia, Cortina d’Ampezzo", "Mittagspause und Vorräte auffüllen."),
         ("Grödner Joch", "sight", 7, "14:00", 46.5490, 11.8086, "Passo Gardena, Wolkenstein", "Aussichtspunkt an der Passhöhe."),
     ]
+    arrival, plateau, return_trip = [
+        con.execute("INSERT INTO stages(trip_id,name,position) VALUES(?,?,?)", (tid, name, position)).lastrowid
+        for position, name in enumerate(["Anreise", "Hochpustertal", "Rückweg"])
+    ]
+    summit, valley = [
+        con.execute("INSERT INTO stage_variants(stage_id,name,notes) VALUES(?,?,?)", (plateau, name, notes)).lastrowid
+        for name, notes in [("Bergroute", "Rundweg an den Drei Zinnen."), ("Talroute", "Ein ruhiger Wandertag im Fischleintal.")]
+    ]
+    con.execute("UPDATE stages SET active_variant_id=? WHERE id=?", (summit, plateau))
+    stop_ids = {}
     for title, kind, offset, time, lat, lon, addr, notes in stops:
-        add("stops", title=title, kind=kind, date=day(offset), time=time, lat=lat, lon=lon,
+        place = add("stops", title=title, kind=kind, date=day(offset), time=time, lat=lat, lon=lon,
+            stage_id=arrival if offset < 2 else plateau if offset < 5 else return_trip,
+            variant_id=summit if title == "Drei Zinnen" else None,
             tags=["Schlafen", "Camping"] if kind == "sleep" else [],
             address=addr, notes=notes, done=offset < 2, end_date=day(4) if kind == "sleep" else None)
-    add("stops", title="Villnößtal", kind="sight", lat=46.642, lon=11.722, tags=["Wandern"],
+        stop_ids[title] = place["id"]
+    add("stops", title="Fischleintal", kind="sight", stage_id=plateau, variant_id=valley,
+        address="Fischleintal, Sexten", notes="Am Bach entlang zur Talschlusshütte.")
+    add("stops", title="Villnößtal", kind="sight", stage_id=return_trip, lat=46.642, lon=11.722, tags=["Wandern"],
         notes="Zeit für einen Spaziergang einplanen, wenn das Wetter passt.")
     add("stops", title="Seceda", kind="sight", saved=True, lat=46.6003, lon=11.7274,
         address="St. Ulrich in Gröden", notes="Als Ausflug bei klarer Sicht vorgemerkt.")
+    journal.create_entry(con, tid, journal.JournalEntry(date=day(0), title="Angekommen in Bozen",
+        text="Den Wagen stehen gelassen und durch die Lauben gelaufen. Auf dem Markt gab es Äpfel für die nächsten Fahrtage.",
+        stop_ids=[stop_ids["Bozen"]]))
+    lake_entry = journal.create_entry(con, tid, journal.JournalEntry(date=day(1), title="Vom See auf die Passstraße",
+        text="Am anderen Ufer des Karersees war es still. Zwischen den Fichten spiegelten sich die Gipfel im Wasser. Auf der Rückfahrt habe ich an der Passstraße noch einmal für ein Foto angehalten.",
+        stop_ids=[stop_ids["Karersee"]]))
+    photo = Path(os.getenv("RR_STATIC_DIR", "frontend/public")) / "dolomiten.webp"
+    if photo.is_file():
+        with photo.open("rb") as image:
+            journal_media.save_upload(con, tid, lake_entry["id"], "Abend an der Passstraße.webp", image,
+                                      photo.stat().st_size, hashlib.file_digest(image, "sha256").hexdigest())
+    con.execute("INSERT INTO favorite_stops(stop_id) VALUES(?)", (stop_ids["Karersee"],))
     add("purchases", title="Gaskartusche", quantity=2, unit="Stk.", estimated_cost=17.8, paid=True,
         done=True, date=day(0), notes="Zwei Kartuschen für den Campingkocher.")
     add("purchases", title="Wanderkarte Dolomiten", estimated_cost=14.9, date=day(3))

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowDownToLine,
+  BookOpen,
   CalendarDays,
   CarFront,
   Check,
@@ -23,14 +24,16 @@ import {
 import '@fontsource-variable/dm-sans/wght.css'
 import './styles.css'
 import RouteView from './Route'
+import Journal from './Journal'
 import Modules from './Modules'
 import Overview, { type Page } from './Overview'
 import { TripChooser, TripEditor, tripStatus } from './Trips'
-import { api, type Trip, type TripData } from './shared'
+import { api, type Stop, type Trip, type TripData } from './shared'
 
 const items = [
   { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
   { id: 'route', label: 'Route & Orte', icon: RouteIcon },
+  { id: 'journal', label: 'Reisetagebuch', icon: BookOpen },
   { id: 'purchases', label: 'Anschaffungen', icon: Package },
   { id: 'pantry', label: 'Vorräte & Einkauf', icon: ShoppingBasket },
   { id: 'mobility', label: 'Auto & Verkehr', icon: CarFront },
@@ -63,6 +66,7 @@ function App() {
   const [drawer, setDrawer] = useState(false)
   const [toast, setToast] = useState('')
   const [quickAction, setQuickAction] = useState('')
+  const [journalStop, setJournalStop] = useState<Stop>()
   const selected = useRef<number | undefined>(undefined)
   const requestedTrip = useRef<number | undefined>(undefined)
   const version = useRef(0)
@@ -111,7 +115,9 @@ function App() {
     document.addEventListener('visibilitychange', refresh)
     window.addEventListener('focus', refresh)
     const hash = () => {
-      setPage(hashPage())
+      const nextPage = hashPage()
+      setPage(nextPage)
+      if (nextPage !== 'journal') setJournalStop(undefined)
       setDrawer(false)
       window.scrollTo(0, 0)
     }
@@ -143,6 +149,7 @@ function App() {
     return () => document.removeEventListener('keydown', escape)
   }, [drawer])
   function go(to: Page) {
+    if (to !== 'journal') setJournalStop(undefined)
     location.hash = to
     setPage(to)
     setDrawer(false)
@@ -287,7 +294,24 @@ function App() {
                 }}
               />
             ) : page === 'route' ? (
-              <RouteView key={data.trip.id} data={data} reload={reload} notify={notify} />
+              <RouteView
+                key={data.trip.id}
+                data={data}
+                reload={reload}
+                notify={notify}
+                onJournal={(stop) => {
+                  setJournalStop(stop)
+                  go('journal')
+                }}
+              />
+            ) : page === 'journal' ? (
+              <Journal
+                key={data.trip.id}
+                data={data}
+                reload={reload}
+                notify={notify}
+                initialStop={journalStop?.trip_id === data.trip.id ? journalStop : undefined}
+              />
             ) : (
               <Modules
                 key={data.trip.id + '-' + page}

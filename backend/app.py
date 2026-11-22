@@ -1,16 +1,14 @@
 """Road Runner's trip-scoped JSON API and single-origin web app."""
 
-import datetime as dt
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import quote
 
 from fastapi import Body, FastAPI, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import models, store
+from . import journal, journal_media, models, stages, store
 
 
 @asynccontextmanager
@@ -20,7 +18,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Road Runner", version="1.0.0", lifespan=lifespan)
-EXPORT_SCHEMA_VERSION = 2
+EXPORT_SCHEMA_VERSION = 3
 
 
 @app.exception_handler(RequestValidationError)
@@ -69,13 +67,11 @@ def delete_trip(tid: int):
 
 @app.get("/api/trips/{tid}/export")
 def export_trip(tid: int):
-    with store.session() as con:
-        data = store.aggregate(con, tid)
-    name = quote(f"{data['trip']['name']}.json", safe="")
-    return JSONResponse(
-        {"schema_version": EXPORT_SCHEMA_VERSION, "exported_at": dt.datetime.now(dt.UTC).isoformat(), **data},
-        headers={"Content-Disposition": f"attachment; filename=road-runner-{tid}.json; filename*=UTF-8''{name}"},
-    )
+    return journal_media.export_response(tid, EXPORT_SCHEMA_VERSION)
+
+
+app.include_router(stages.router)
+app.include_router(journal.router)
 
 
 @app.put("/api/trips/{tid}/stops/order")

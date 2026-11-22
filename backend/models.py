@@ -89,6 +89,8 @@ class Trip(Form):
 
 class Stop(TaggedForm):
     title: Name
+    stage_id: int | None = None
+    variant_id: int | None = None
     kind: Literal["stop", "sight", "sleep"] = "stop"
     date: dt.date | None = None
     time: Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")] | None = None

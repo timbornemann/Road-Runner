@@ -79,6 +79,7 @@ svg {
   z-index: 30;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
   padding: 30px 16px 14px;
 }
 .brand {

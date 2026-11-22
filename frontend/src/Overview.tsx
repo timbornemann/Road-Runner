@@ -24,10 +24,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { TripMap } from './Route'
-import { localDate, money, navUrl, type Stop, type TripData } from './shared'
+import { activeRoute, localDate, money, navUrl, type Stop, type TripData } from './shared'
 import { tripDates, tripStatus } from './Trips'
 
-export type Page = 'overview' | 'route' | 'purchases' | 'pantry' | 'finance' | 'mobility'
+export type Page = 'overview' | 'route' | 'journal' | 'purchases' | 'pantry' | 'finance' | 'mobility'
 type Actions = {
   data: TripData
   go: (page: Page) => void
@@ -130,10 +130,10 @@ function dayNumber(date: string) {
 }
 
 export default function Overview({ data, go, quick, edit }: Actions) {
-  const { trip, stops, expenses } = data
+  const { trip, expenses } = data
   const [mapStop, setMapStop] = useState<Stop | null>(null)
   const today = localDate()
-  const itinerary = stops.filter((s) => !s.saved).sort((a, b) => a.position - b.position || a.id - b.id)
+  const itinerary = activeRoute(data)
   const nextStops = itinerary.filter((s) => !s.done)
   const next = nextStops[0]
   const sleep =

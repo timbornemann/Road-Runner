@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   BedDouble,
+  BookOpen,
   Bookmark,
   CalendarDays,
   Camera,
@@ -14,6 +15,7 @@ import {
   ExternalLink,
   Flag,
   GripVertical,
+  Layers3,
   List,
   LocateFixed,
   Map as MapIcon,
@@ -25,8 +27,10 @@ import {
   Route as RouteIcon,
   Trash2,
 } from 'lucide-react'
-import { api, dateLabel, Modal, navUrl, type Stop, type TripData } from './shared'
+import { activeRoute, api, dateLabel, Modal, navUrl, type RouteStage, type Stop, type TripData } from './shared'
 import { TagChips, TagEditor, tripTags, useTagView } from './Tags'
+import StageManager from './StageManager'
+import RouteStageCard from './RouteStageCard'
 import './route.css'
 
 const kinds = {
@@ -55,6 +59,7 @@ function dayLabel(value: string) {
 
 interface MapProps {
   stops: Stop[]
+  connectStops?: boolean
   visibleIds?: ReadonlySet<number>
   onSelect?: (stop: Stop) => void
   onPick?: (coords: Coordinates) => void
@@ -68,7 +73,7 @@ function fitPlaces(map: L.Map, coords: Coordinates[]) {
 }
 
 /** This is an itinerary overview. The dashed line connects places in visiting order. */
-export function TripMap({ stops, visibleIds, onSelect, onPick, picked }: MapProps) {
+export function TripMap({ stops, visibleIds, onSelect, onPick, picked, connectStops = true }: MapProps) {
   const host = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layersRef = useRef<L.LayerGroup | null>(null)
@@ -130,10 +135,10 @@ export function TripMap({ stops, visibleIds, onSelect, onPick, picked }: MapProp
     const layer = layersRef.current
     if (!map || !layer) return
     layer.clearLayers()
-    const route = ordered(stops.filter((stop) => !stop.saved))
+    const route = stops.filter((stop) => !stop.saved)
     const pins = [...route, ...stops.filter((stop) => stop.saved)]
     const routeCoords = route.map(getCoordinates).filter((coord): coord is Coordinates => !!coord)
-    if (routeCoords.length > 1 && route.some((stop) => !visibleIds || visibleIds.has(stop.id)))
+    if (connectStops && routeCoords.length > 1 && route.some((stop) => !visibleIds || visibleIds.has(stop.id)))
       L.polyline(routeCoords, {
         color: '#29644e',
         weight: 3,
@@ -184,7 +189,7 @@ export function TripMap({ stops, visibleIds, onSelect, onPick, picked }: MapProp
       lastFit.current = signature
       if (host.current?.clientWidth && host.current.clientHeight) fitPlaces(map, allCoords)
     }
-  }, [stops, visibleIds, picked])
+  }, [stops, visibleIds, picked, connectStops])
 
   return (
     <div className={'rr-map' + (onPick ? ' can-pick' : '')}>
@@ -201,6 +206,8 @@ export function TripMap({ stops, visibleIds, onSelect, onPick, picked }: MapProp
 
 interface StopDraft {
   title: string
+  stage_id: number | null
+  variant_id: number | null
   kind: StopKind
   address: string
   lat: string
@@ -216,6 +223,8 @@ interface StopDraft {
 function draftFor(stop?: Stop, saved = false, coords?: Coordinates): StopDraft {
   return {
     title: stop?.title || '',
+    stage_id: stop?.stage_id ?? null,
+    variant_id: stop?.variant_id ?? null,
     kind: (stop?.kind as StopKind) || 'stop',
     address: stop?.address || '',
     lat: String(coords?.[0] ?? stop?.lat ?? ''),
@@ -237,6 +246,7 @@ function StopEditor({
   stop,
   initial,
   tripId,
+  stages,
   suggestions,
   onClose,
   afterSave,
@@ -244,6 +254,7 @@ function StopEditor({
   stop?: Stop
   initial: StopDraft
   tripId: number
+  stages: RouteStage[]
   suggestions: string[]
   onClose: () => void
   afterSave: () => Promise<void>
@@ -256,6 +267,7 @@ function StopEditor({
   const change = <K extends keyof StopDraft>(key: K, value: StopDraft[K]) =>
     setDraft((old) => ({ ...old, [key]: value }))
   const fixed = draft.plan === 'fixed'
+  const stage = stages.find((item) => item.id === draft.stage_id)
   const lat = numberFrom(draft.lat)
   const lon = numberFrom(draft.lon)
   const validCoordinates =
@@ -289,6 +301,8 @@ function StopEditor({
     try {
       await api('/api/trips/' + tripId + '/stops' + (stop ? '/' + stop.id : ''), stop ? 'PATCH' : 'POST', {
         title: draft.title.trim(),
+        stage_id: draft.plan === 'saved' ? null : draft.stage_id,
+        variant_id: draft.plan === 'saved' ? null : draft.variant_id,
         kind: draft.kind,
         address: draft.address.trim(),
         lat,
@@ -354,6 +368,27 @@ function StopEditor({
             </select>
           </label>
         </div>
+        {draft.plan !== 'saved' && stages.length > 0 && (
+          <div className="rr-form-pair">
+            <label className="field">
+              Etappe
+              <select aria-label="Etappe" value={draft.stage_id ?? ''} onChange={(event) => {
+                const id = Number(event.target.value) || null
+                setDraft((old) => ({ ...old, stage_id: id, variant_id: null }))
+              }}>
+                <option value="">Ohne Etappe</option>
+                {stages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
+            {!!stage?.variants.length && <label className="field">
+              Variante
+              <select aria-label="Variante" value={draft.variant_id ?? ''} onChange={(event) => change('variant_id', Number(event.target.value) || null)}>
+                <option value="">Alle Varianten</option>
+                {stage.variants.map((variant) => <option key={variant.id} value={variant.id}>{variant.name}</option>)}
+              </select>
+            </label>}
+          </div>
+        )}
         {draft.plan !== 'saved' && (
           <div className="rr-form-pair">
             {fixed && (
@@ -469,9 +504,10 @@ interface RouteProps {
   data: TripData
   reload: () => Promise<void>
   notify: (message: string) => void
+  onJournal: (stop: Stop) => void
 }
 
-export default function Route({ data, reload, notify }: RouteProps) {
+export default function Route({ data, reload, notify, onJournal }: RouteProps) {
   const [tab, setTab] = useState<'route' | 'saved'>('route')
   const [viewMode, setViewMode] = useState<'sequence' | 'days'>('sequence')
   const [mobilePane, setMobilePane] = useState<'list' | 'map'>('list')
@@ -480,15 +516,18 @@ export default function Route({ data, reload, notify }: RouteProps) {
   const [selected, setSelected] = useState<Stop | null>(null)
   const [dragging, setDragging] = useState<number | null>(null)
   const [working, setWorking] = useState(false)
+  const [manageStages, setManageStages] = useState(false)
   const allStops = useMemo(() => ordered(data.stops), [data.stops])
-  const route = useMemo(() => allStops.filter((stop) => !stop.saved), [allStops])
+  const route = useMemo(() => activeRoute(data), [data])
   const saved = useMemo(() => allStops.filter((stop) => stop.saved), [allStops])
+  const mapStops = useMemo(() => [...route, ...saved], [route, saved])
   const numbers = new Map(route.map((stop, index) => [stop.id, index + 1]))
   const list = tab === 'saved' ? saved : route
   const view = useTagView(list)
   const visibleIds = useMemo(() => new Set(view.filtered.map((stop) => stop.id)), [view.filtered])
   const daysView = tab === 'route' && viewMode === 'days' && !view.grouped
   const canSort = tab === 'route' && !daysView && !view.grouped && !view.active
+  const byStage = tab === 'route' && !daysView && !view.grouped && data.stages.length > 0
   let sections = view.groups
   if (daysView) {
     const days = new Map<string, Stop[]>()
@@ -502,7 +541,9 @@ export default function Route({ data, reload, notify }: RouteProps) {
       .map(([key, items]) => ({ key, label: dayLabel(key), items }))
   }
   const root = '/api/trips/' + data.trip.id + '/stops'
-  const create = (coords?: Coordinates) => setEditor({ draft: draftFor(undefined, tab === 'saved', coords) })
+  const create = (coords?: Coordinates, stage?: RouteStage, variantId = stage?.active_variant_id) => setEditor({
+    draft: { ...draftFor(undefined, tab === 'saved', coords), stage_id: stage?.id ?? null, variant_id: variantId ?? null },
+  })
   const edit = (stop: Stop, planned = false) => {
     setSelected(null)
     setEditor({ stop, draft: { ...draftFor(stop), ...(planned ? { plan: 'flexible' as const } : {}) } })
@@ -520,19 +561,22 @@ export default function Route({ data, reload, notify }: RouteProps) {
       setWorking(false)
     }
   }
-  const move = (from: Stop, to: Stop) => {
-    if (!canSort || from.id === to.id || from.saved || to.saved) return
-    const routeIds = route.map((stop) => stop.id)
+  const move = (from: Stop, to: Stop, siblings: Stop[]) => {
+    if (!canSort || from.id === to.id || from.saved || to.saved || from.stage_id !== to.stage_id) return
+    const routeIds = siblings.map((stop) => stop.id)
+    const members = new Set(routeIds)
     const source = routeIds.indexOf(from.id)
     const target = routeIds.indexOf(to.id)
     routeIds.splice(source, 1)
     routeIds.splice(target, 0, from.id)
     let next = 0
-    const ids = allStops.map((stop) => (stop.saved ? stop.id : routeIds[next++]))
+    const ids = allStops.map((stop) => (members.has(stop.id) ? routeIds[next++] : stop.id))
     void mutate(() => api(root + '/order', 'PUT', { ids }), 'Reihenfolge gespeichert.')
   }
   const renderStop = (stop: Stop, siblings: Stop[], index: number) => {
     const { Icon, title } = kinds[stop.kind as StopKind] || kinds.stop
+    const stage = data.stages.find((item) => item.id === stop.stage_id)
+    const branch = stage?.variants.find((variant) => variant.id === stop.variant_id)
     return (
       <article
         className={'rr-stop' + (stop.done ? ' completed' : '') + (dragging === stop.id ? ' dragging' : '')}
@@ -543,7 +587,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
         onDrop={(event) => {
           event.preventDefault()
           const from = siblings.find((item) => item.id === dragging)
-          if (from) move(from, stop)
+          if (from) move(from, stop, siblings)
           setDragging(null)
         }}
       >
@@ -557,6 +601,8 @@ export default function Route({ data, reload, notify }: RouteProps) {
           <div className="rr-stop-overline">
             {!stop.saved && <Icon size={12} aria-hidden="true" />}
             <span>{title}</span>
+            {stage && !byStage && <span>· {stage.name}</span>}
+            {!!stage?.variants.length && <span>· {branch?.name ?? 'Alle Varianten'}</span>}
             {!stop.saved && (
               <>
                 <span aria-hidden="true">·</span>
@@ -581,6 +627,9 @@ export default function Route({ data, reload, notify }: RouteProps) {
           )}
           {stop.kind === 'sleep' && stop.end_date && <small>Bis {dayLabel(stop.end_date)}</small>}
           <TagChips tags={stop.tags} />
+          {stop.done && <button className="rr-journal-action" onClick={() => onJournal(stop)}>
+            <BookOpen size={13} /> Ins Tagebuch schreiben
+          </button>}
         </div>
         <div className="rr-row-tools">
           {canSort && siblings.length > 1 && (
@@ -589,7 +638,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
                 disabled={working || index === 0}
                 title="Stopp nach oben"
                 aria-label={stop.title + ' nach oben'}
-                onClick={() => move(stop, siblings[index - 1])}
+                onClick={() => move(stop, siblings[index - 1], siblings)}
               >
                 <ArrowUp size={14} />
               </button>
@@ -610,7 +659,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
                 disabled={working || index === siblings.length - 1}
                 title="Stopp nach unten"
                 aria-label={stop.title + ' nach unten'}
-                onClick={() => move(stop, siblings[index + 1])}
+                onClick={() => move(stop, siblings[index + 1], siblings)}
               >
                 <ArrowDown size={14} />
               </button>
@@ -662,10 +711,13 @@ export default function Route({ data, reload, notify }: RouteProps) {
           <h1 className="page-title">Route &amp; Orte</h1>
           <p className="page-intro">Deine Etappen, Schlafplätze und Entdeckungen auf einer Karte.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => create()}>
-          <Plus size={17} />
-          {tab === 'saved' ? 'Ort merken' : 'Stopp hinzufügen'}
-        </button>
+        <div className="rr-route-actions">
+          <button className="btn btn-secondary" onClick={() => setManageStages(true)}><Layers3 size={16} /> Etappen verwalten</button>
+          <button className="btn btn-primary" onClick={() => create()}>
+            <Plus size={17} />
+            {tab === 'saved' ? 'Ort merken' : 'Stopp hinzufügen'}
+          </button>
+        </div>
       </div>
       <div className="rr-mobile-tabs" aria-label="Ansicht">
         <button className={mobilePane === 'list' ? 'active' : ''} onClick={() => setMobilePane('list')}>
@@ -697,7 +749,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
               Merkliste <span>{saved.length}</span>
             </button>
           </div>
-          {list.length > 0 && (
+          {(list.length > 0 || (tab === 'route' && data.stages.length > 0)) && (
             <div className="rr-view-options">
               {tab === 'route' && (
                 <div className="rr-sequence-toggle" role="group" aria-label="Reiseverlauf anzeigen">
@@ -727,7 +779,39 @@ export default function Route({ data, reload, notify }: RouteProps) {
           {tab === 'route' && !canSort && list.length > 1 && (
             <p className="rr-reorder-hint">Zum Umsortieren die ungefilterte Routenfolge öffnen.</p>
           )}
-          {list.length === 0 ? (
+          {byStage && (!view.active || view.filtered.length > 0) ? (
+            <>
+              {data.stages.map((stage) => {
+                const items = view.filtered.filter((stop) => stop.stage_id === stage.id)
+                if (!items.length && view.active) return null
+                return (
+                  <RouteStageCard
+                    key={stage.id}
+                    stage={stage}
+                    count={items.length}
+                    stops={allStops}
+                    showAlternatives={!view.active}
+                    working={working}
+                    onSwitch={(variantId) => {
+                      const path = '/api/trips/' + data.trip.id + '/stages/' + stage.id + '/variants/' + variantId + '/activate'
+                      void mutate(() => api(path, 'PUT'), 'Routenvariante gewechselt.')
+                    }}
+                    onSelect={setSelected}
+                    onMove={move}
+                    onAdd={(variantId) => create(undefined, stage, variantId)}
+                  >
+                    {items.length > 0 && (
+                      <div className="rr-day-stops">{items.map((stop, index) => renderStop(stop, items, index))}</div>
+                    )}
+                  </RouteStageCard>
+                )
+              })}
+              {view.filtered.some((stop) => stop.stage_id === null) && <div className="rr-day">
+                <h2>Ohne Etappe</h2>
+                <div className="rr-day-stops">{view.filtered.filter((stop) => stop.stage_id === null).map((stop, index, items) => renderStop(stop, items, index))}</div>
+              </div>}
+            </>
+          ) : list.length === 0 ? (
             <div className="rr-empty">
               <span className="rr-empty-icon">{tab === 'saved' ? <Bookmark /> : <Flag />}</span>
               <h2>{tab === 'saved' ? 'Welche Orte möchtest du sehen?' : 'Wo beginnt deine Reise?'}</h2>
@@ -769,7 +853,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
             <span>{view.filtered.filter((stop) => !!getCoordinates(stop)).length} markiert</span>
           </div>
           <div className="rr-route-map">
-            <TripMap stops={allStops} visibleIds={visibleIds} onPick={create} onSelect={setSelected} />
+            <TripMap stops={mapStops} visibleIds={visibleIds} onPick={create} onSelect={setSelected} />
           </div>
           <p className="rr-map-hint">
             <MapPinPlus size={16} />
@@ -777,9 +861,11 @@ export default function Route({ data, reload, notify }: RouteProps) {
           </p>
         </div>
       </div>
+      {manageStages && <StageManager tripId={data.trip.id} stages={data.stages} reload={reload} onClose={() => setManageStages(false)} />}
       {editor && (
         <StopEditor
           tripId={data.trip.id}
+          stages={data.stages}
           suggestions={tripTags(data)}
           stop={editor.stop}
           initial={editor.draft}
@@ -817,6 +903,7 @@ export default function Route({ data, reload, notify }: RouteProps) {
               </p>
             )}
             {selected.notes && <div className="rr-detail-notes">{selected.notes}</div>}
+            <button className="rr-text-action" onClick={() => onJournal(selected)}><BookOpen size={16} /> Ins Tagebuch schreiben</button>
             <a href={navUrl(selected)} target="_blank" rel="noreferrer" className="rr-navi">
               <Navigation size={16} />
               Navigation öffnen

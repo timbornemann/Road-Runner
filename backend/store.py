@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from . import models
+from . import stages
 
 
 COLLECTIONS = {
@@ -20,15 +21,15 @@ COLLECTIONS = {
 }
 COSTED = {"purchases", "mobility"}
 MONEY_FIELDS = {"budget", "estimated_cost", "amount", "base_amount"}
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def data_file():
     return Path(os.getenv("RR_DATA_DIR", "data")) / "road-runner.sqlite3"
 
 
-def connect():
-    con = sqlite3.connect(data_file(), timeout=15, isolation_level=None)
+def connect(*, check_same_thread=True):
+    con = sqlite3.connect(data_file(), timeout=15, isolation_level=None, check_same_thread=check_same_thread)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys=ON")
     return con
@@ -67,10 +68,15 @@ def initialize():
                 trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
                 request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT NOT NULL,
                 PRIMARY KEY (trip_id, request_id))""")
-            from .seed import seed_demo
-            seed_demo(con)
         elif version == 1:
             migrate_v1(con)
+        if version < 3:
+            from . import journal
+            journal.migrate(con)
+            stages.migrate(con)
+        if version == 0:
+            from .seed import seed_demo
+            seed_demo(con)
         if version < SCHEMA_VERSION:
             con.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
@@ -185,7 +191,9 @@ def record(con, tid, group, rid):
 
 
 def aggregate(con, tid):
-    return {"trip": trip(con, tid), **{group: records(con, tid, group) for group in COLLECTIONS}}
+    from . import journal
+    return {"trip": trip(con, tid), **journal.trip_data(con, tid), **{group: records(con, tid, group) for group in COLLECTIONS},
+            "stages": stages.stage_data(con, tid)}
 
 
 def put(con, tid, group, data):
@@ -229,6 +237,8 @@ def upsert(con, tid, group, values, rid=None):
     if group in COSTED or group == "expenses":
         values = prepare_currency(values, original, journey["currency"])
     data = validated(COLLECTIONS[group], values, original)
+    if group == "stops":
+        stages.validate_stop(con, tid, data)
     if group == "mobility" and data["stop_id"] is not None:
         record(con, tid, "stops", data["stop_id"])
     if group == "shopping":
