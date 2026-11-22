@@ -19,7 +19,7 @@ async def lifespan(app):
         yield
 
 
-app = FastAPI(title="Road Runner", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Road Runner", version="1.1.0", lifespan=lifespan)
 EXPORT_SCHEMA_VERSION = 3
 
 for mcp_path in ("/mcp", "/mcp/"):

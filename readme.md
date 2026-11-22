@@ -50,17 +50,16 @@ RR_MCP_TOKEN=<dein-zufälliges-Token>
 RR_MCP_READ_ONLY=false
 ```
 
-Verwende ein Image mit MCP-Unterstützung. Für den **aktuellen Quellstand** baue das Image und ergänze `ROAD_RUNNER_IMAGE=road-runner:dev` in derselben `.env`. Starte Compose aus dem bisherigen Projektverzeichnis, damit dieselben Reisedaten eingebunden werden.
+Das veröffentlichte Image enthält den MCP-Server ab v1.1.0. Starte Compose aus dem bisherigen Projektverzeichnis, damit dieselben Reisedaten eingebunden werden.
 
 ```sh
-docker build -t road-runner:dev .
-docker compose up -d
+docker compose up -d --pull always
 ```
 
-Bei **`docker run`** kannst du dieselben drei MCP-Einstellungen über `--env-file .env` mitgeben. Der folgende Einzeiler startet einen neuen Container mit dem lokal gebauten Image. Beim Ersetzen einer bestehenden Installation übernimm ihren bisherigen Volumenamen und Host-Port.
+Bei **`docker run`** kannst du dieselben drei MCP-Einstellungen über `--env-file .env` mitgeben. Dieser Einzeiler veröffentlicht Road-Runner auf Port 3005 und aktiviert das Watchtower-Label. Beim Ersetzen einer bestehenden Installation übernimm ihren bisherigen Volumenamen und Host-Port.
 
 ```sh
-docker run --name road-runner -d --restart unless-stopped -p 8080:8080 -e TZ=Europe/Berlin --env-file .env -v road-runner_reisedaten:/data road-runner:dev
+docker run -d --name road-runner --restart unless-stopped --pull always -p 3005:8080 -e TZ=Europe/Berlin --env-file .env -v road-runner_reisedaten:/data --label com.centurylinklabs.watchtower.enable=true ghcr.io/timbornemann/road-runner:latest
 ```
 
 ### Agent verbinden
