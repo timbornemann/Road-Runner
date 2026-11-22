@@ -1,0 +1,35 @@
+# Frontend dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python environments and caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Trip data, SQLite journals and backups
+/data/
+/backups/
+*.sqlite*
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+road-runner-backup*.tar.gz
+
+# Logs and local tooling
+*.log
+.idea/
+.vscode/
+.DS_Store
+Desktop.ini
