@@ -162,70 +162,72 @@ export default function Overview({ data, go, quick, edit }: Actions) {
         <h1>Reiseübersicht</h1>
         <QuickAdd quick={quick} />
       </div>
-      <section className={'trip-hero' + (trip.is_demo ? '' : ' personal-hero')} aria-label="Aktuelle Reise">
-        <div className="hero-body">
-          <div className="hero-status">
-            <span />
-            {status}
-          </div>
-          <h2>{trip.name}</h2>
-          <div className="hero-meta">
-            {trip.region && (
+      <div className="overview-summary">
+        <section className={'trip-hero' + (trip.is_demo ? '' : ' personal-hero')} aria-label="Aktuelle Reise">
+          <div className="hero-body">
+            <div className="hero-status">
+              <span />
+              {status}
+            </div>
+            <h2>{trip.name}</h2>
+            <div className="hero-meta">
+              {trip.region && (
+                <span>
+                  <MapPin />
+                  {trip.region}
+                </span>
+              )}
               <span>
-                <MapPin />
-                {trip.region}
+                <CalendarDays />
+                {tripDates(trip)}
               </span>
-            )}
-            <span>
-              <CalendarDays />
-              {tripDates(trip)}
-            </span>
+            </div>
           </div>
+          <button className="hero-edit" aria-label="Reise bearbeiten" title="Reise bearbeiten" onClick={edit}>
+            <Pencil size={16} />
+          </button>
+          {trip.is_demo && <span className="demo-mark">Beispielreise</span>}
+        </section>
+        <div className="stats-grid">
+          <Stat
+            icon={CalendarDays}
+            label="Reisetage"
+            tone="peach"
+            value={status === 'Unterwegs' && day > 0 ? 'Tag ' + day : duration ? String(duration) : 'Offen'}
+            detail={
+              duration
+                ? status === 'Unterwegs'
+                  ? 'von ' + duration + ' Reisetagen'
+                  : 'Tage insgesamt'
+                : 'Zeitraum festlegen'
+            }
+            onClick={edit}
+          />
+          <Stat
+            icon={RouteIcon}
+            label="Routenstopps"
+            tone="sage"
+            value={String(itinerary.length)}
+            detail={itinerary.filter((s) => s.done).length + ' bereits besucht'}
+            onClick={() => go('route')}
+          />
+          <Stat
+            icon={Wallet}
+            label="Freies Budget"
+            tone="gold"
+            value={money(free, trip.currency)}
+            detail="nach geplanten Ausgaben"
+            onClick={() => go('finance')}
+          />
+          <Stat
+            icon={ShoppingBasket}
+            label="Einkaufsliste"
+            tone="blue"
+            value={String(open)}
+            detail={open === 1 ? 'offener Artikel' : 'offene Artikel'}
+            onClick={() => go('pantry')}
+          />
         </div>
-        <button className="hero-edit" aria-label="Reise bearbeiten" title="Reise bearbeiten" onClick={edit}>
-          <Pencil size={16} />
-        </button>
-        {trip.is_demo && <span className="demo-mark">Beispielreise</span>}
-      </section>
-      <div className="stats-grid">
-        <Stat
-          icon={CalendarDays}
-          label="Reisetage"
-          tone="peach"
-          value={status === 'Unterwegs' && day > 0 ? 'Tag ' + day : duration ? String(duration) : 'Offen'}
-          detail={
-            duration
-              ? status === 'Unterwegs'
-                ? 'von ' + duration + ' Reisetagen'
-                : 'Tage insgesamt'
-              : 'Zeitraum festlegen'
-          }
-          onClick={edit}
-        />
-        <Stat
-          icon={RouteIcon}
-          label="Routenstopps"
-          tone="sage"
-          value={String(itinerary.length)}
-          detail={itinerary.filter((s) => s.done).length + ' bereits besucht'}
-          onClick={() => go('route')}
-        />
-        <Stat
-          icon={Wallet}
-          label="Freies Budget"
-          tone="gold"
-          value={money(free, trip.currency)}
-          detail="nach geplanten Ausgaben"
-          onClick={() => go('finance')}
-        />
-        <Stat
-          icon={ShoppingBasket}
-          label="Einkaufsliste"
-          tone="blue"
-          value={String(open)}
-          detail={open === 1 ? 'offener Artikel' : 'offene Artikel'}
-          onClick={() => go('pantry')}
-        />
       </div>
       <div className="overview-columns">
         <section className="panel dash-panel">
@@ -320,8 +322,6 @@ export default function Overview({ data, go, quick, edit }: Actions) {
             ))}
           </div>
         </section>
-      </div>
-      <div className="overview-columns bottom-panels">
         <section className="panel dash-panel">
           <header className="panel-heading">
             <div className="heading-pack">
@@ -330,10 +330,10 @@ export default function Overview({ data, go, quick, edit }: Actions) {
               </span>
               <h2>Routenkarte</h2>
             </div>
-            <button className="text-link" onClick={() => go('route')}>
+            <a className="text-link" href="#route/map">
               Karte öffnen
               <ArrowRight size={15} />
-            </button>
+            </a>
           </header>
           <div className="dashboard-map">
             <TripMap stops={itinerary} onSelect={setMapStop} />

@@ -35,7 +35,7 @@
 }
 .nb-layout {
   display: grid;
-  grid-template-columns: minmax(13rem, 29%) minmax(0, 1fr);
+  grid-template-columns: clamp(13rem, 24%, 23rem) minmax(0, 1fr);
   border: 1px solid var(--nb-rule);
   border-radius: 15px;
   background: var(--nb-paper);
@@ -165,6 +165,7 @@
 .nb-content {
   min-width: 0;
   padding: clamp(1rem, 2.7vw, 2.6rem);
+  container: notebook-page / inline-size;
 }
 .nb-crumbs {
   gap: 0.25rem;
@@ -221,6 +222,24 @@
 }
 .nb-entry-list {
   display: grid;
+}
+.nb-content .nb-entry-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  column-gap: 1.5rem;
+}
+@container notebook-page (min-width: 54rem) {
+  .nb-note-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(1.5rem, 3cqi, 3rem);
+  }
+  .nb-note-body .notebook-links {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    border-top: 0;
+    border-left: 1px solid var(--nb-rule);
+  }
 }
 .nb-entry {
   width: 100%;

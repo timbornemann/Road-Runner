@@ -27,7 +27,7 @@ export default function Modules({ page, data, reload, notify, quickAction, onQui
   }
   return (
     <ModuleContext.Provider value={{ data, save }}>
-      <div key={data.trip.id}>
+      <div key={data.trip.id} className={'module-workspace module-' + page}>
         {page === 'finance' ? (
           <Finance startExpense={quickAction === 'expense'} onHandled={onQuickHandled} />
         ) : page === 'mobility' ? (

@@ -69,6 +69,7 @@ function preferredTrip(trips: Trip[]) {
 }
 function App() {
   const [page, setPage] = useState<Page>(hashPage)
+  const [routeMap, setRouteMap] = useState(() => location.hash === '#route/map')
   const [target, setTarget] = useState<NotebookTarget | null>(() => hashDestination()?.target ?? null)
   const [trips, setTrips] = useState<Trip[]>([])
   const [data, setData] = useState<TripData | null>(null)
@@ -131,6 +132,7 @@ function App() {
     const hash = () => {
       const nextPage = hashPage()
       const destination = hashDestination()
+      setRouteMap(location.hash === '#route/map')
       if (destination?.tripId && destination.tripId !== selected.current) void load(destination.tripId).catch(() => {})
       setTarget(destination?.target ?? null)
       setPage(nextPage)
@@ -192,6 +194,7 @@ function App() {
     go('overview')
   }
   const current = items.find((i) => i.id === page)!
+  const mapWorkspace = !!data && (page === 'places' || page === 'route')
   const index = useMemo(() => targetIndex(data), [data])
   const nativeKey = [data?.trip.id, page, target?.kind, target?.id].join('/')
   const shell = (
@@ -271,7 +274,7 @@ function App() {
           </div>
         </div>
       </aside>
-      <div className={'workspace' + (page === 'places' && data ? ' places-workspace' : '')}>
+      <div className={'workspace' + (mapWorkspace ? ' map-workspace' : '')}>
         <header className="topbar">
           <div className="breadcrumbs">
             <button
@@ -288,7 +291,7 @@ function App() {
               Meine Reisen
             </button>
             <ChevronRight size={13} />
-            {page === 'places' && data ? <h1>{current.label}</h1> : <strong>{current.label}</strong>}
+            {mapWorkspace ? <h1>{current.label}</h1> : <strong>{current.label}</strong>}
           </div>
           <div className="bar-actions">
             <span className="today-date">
@@ -340,8 +343,9 @@ function App() {
               </Suspense>
             ) : page === 'route' ? (
               <RouteView
-                key={nativeKey}
+                key={nativeKey + (routeMap ? '/map' : '')}
                 data={data}
+                initialMap={routeMap}
                 reload={reload}
                 notify={notify}
                 onJournal={(stop) => {

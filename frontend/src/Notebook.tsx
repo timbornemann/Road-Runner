@@ -439,21 +439,23 @@ export default function Notebook({ data, target, onOpen, reload, notify }: Props
                   remove={() => remove('note', note.id, note.topic_id, note.revision)}
                 />
               </div>
-              {note.body ? (
-                <NotebookText
-                  body={pendingCheck?.noteId === note.id ? pendingCheck.body : note.body}
-                  toggle={(index) => void checkTask(index)}
-                  busy={pendingCheck !== null}
+              <div className="nb-note-body">
+                {note.body ? (
+                  <NotebookText
+                    body={pendingCheck?.noteId === note.id ? pendingCheck.body : note.body}
+                    toggle={(index) => void checkTask(index)}
+                    busy={pendingCheck !== null}
+                  />
+                ) : (
+                  <p className="nb-muted">Diese Notiz hat noch keinen Text.</p>
+                )}
+                <NotebookLinks
+                  key={'note' + note.id}
+                  source={{ kind: 'note', id: note.id }}
+                  reload={reload}
+                  notify={notify}
                 />
-              ) : (
-                <p className="nb-muted">Diese Notiz hat noch keinen Text.</p>
-              )}
-              <NotebookLinks
-                key={'note' + note.id}
-                source={{ kind: 'note', id: note.id }}
-                reload={reload}
-                notify={notify}
-              />
+              </div>
             </>
           ) : area ? (
             <>

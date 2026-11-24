@@ -1,0 +1,146 @@
+.rr-map-card.rr-road-map-workspace {
+  container-type: inline-size;
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  isolation: isolate;
+}
+.rr-road-map-workspace .rr-route-map {
+  height: 100%;
+  border: 0;
+}
+.rr-road-map-tools {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  right: 56px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+.rr-road-map-tools > * {
+  pointer-events: auto;
+}
+.rr-road-map-buttons,
+.rr-road-map-modes {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.rr-map-command,
+.rr-route-scope,
+.rr-road-map-modes {
+  border: 1px solid #c7d2c7;
+  background: #fffffff7;
+  border-radius: 8px;
+  color: var(--green);
+  box-shadow: 0 2px 8px #17372a20;
+}
+.rr-map-command {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  width: 38px;
+}
+.rr-map-command:hover,
+.rr-map-command[aria-pressed='true'] {
+  background: #e8f0e4;
+}
+.rr-route-scope {
+  display: flex;
+  position: relative;
+  align-items: center;
+  min-width: 38px;
+  max-width: 180px;
+  height: 38px;
+}
+.rr-route-scope svg {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+}
+.rr-route-scope select {
+  cursor: pointer;
+  font: 600 .81rem var(--display);
+  color: var(--green);
+  padding: 0 4px 0 31px;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+  text-overflow: ellipsis;
+}
+.rr-road-map-modes {
+  padding: 3px;
+  gap: 2px;
+}
+.rr-road-map-modes button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  font: 600 .81rem var(--display);
+}
+.rr-road-map-modes button[aria-pressed='true'] {
+  background: #e5eee4;
+  color: var(--green);
+}
+.rr-pin.rr-pin-selected {
+  background: #ac6333;
+  box-shadow: 0 0 0 3px #f5ce80bc, 0 2px 5px #18301b60;
+}
+.rr-road-map-workspace .rr-road-result {
+  position: absolute;
+  z-index: 1;
+  bottom: 23px;
+  left: 12px;
+  width: min(340px, calc(100% - 24px));
+  max-height: calc(100% - 100px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #c7d2c7;
+  border-radius: 10px;
+  background: #fffffff7;
+  box-shadow: 0 3px 12px #17372a20;
+}
+.rr-road-map-workspace:has(.pl-popup-body) .rr-road-result {
+  display: none;
+}
+.rr-road-map-workspace .rr-road-legs ol {
+  max-height: min(28dvh, 240px);
+  overscroll-behavior: contain;
+}
+@container (max-width: 575px) {
+  .rr-road-map-modes button span { display: none; }
+  .rr-road-map-modes button { width: 34px; padding: 0; }
+}
+@container (max-width: 355px) {
+  .rr-route-scope { width: 38px; }
+  .rr-route-scope select { opacity: 0; }
+  .rr-route-scope:focus-within { outline: 2px solid var(--green); }
+}
+@media (max-width: 760px) {
+  :root:not(.pl-map-fullscreen) .rr-road-map-workspace .rr-road-result {
+    bottom: calc(69px + env(safe-area-inset-bottom));
+    max-height: calc(100% - 152px);
+  }
+}
+@media (pointer: coarse) {
+  .rr-map-command, .rr-route-scope { height: 44px; min-width: 44px; }
+  .rr-road-map-modes button { height: 36px; min-width: 38px; }
+}

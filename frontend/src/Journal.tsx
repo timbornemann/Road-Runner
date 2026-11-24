@@ -64,38 +64,40 @@ function JournalNote({
           </button>
         </div>
       </header>
-      {entry.text && <p className="journal-prose">{entry.text}</p>}
-      {entry.media.length > 0 && (
-        <div className="journal-gallery">
-          {entry.media.map((media) => (
-            <figure key={media.id}>
-              {media.mime_type.startsWith('video/') ? (
-                <video controls playsInline preload="metadata" aria-label={media.filename} src={media.url} />
-              ) : (
-                <a
-                  href={media.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={media.filename + ' in Originalgröße öffnen'}
-                >
-                  <img loading="lazy" alt={media.filename} src={media.url} />
-                </a>
-              )}
-              <figcaption>
-                <span>{media.filename}</span>
-                <a
-                  href={media.url}
-                  download={media.filename}
-                  aria-label={media.filename + ' herunterladen'}
-                  title="Originaldatei herunterladen"
-                >
-                  <Download size={14} />
-                </a>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
+      <div className="journal-note-body">
+        {entry.text && <p className="journal-prose">{entry.text}</p>}
+        {entry.media.length > 0 && (
+          <div className="journal-gallery">
+            {entry.media.map((media) => (
+              <figure key={media.id}>
+                {media.mime_type.startsWith('video/') ? (
+                  <video controls playsInline preload="metadata" aria-label={media.filename} src={media.url} />
+                ) : (
+                  <a
+                    href={media.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={media.filename + ' in Originalgröße öffnen'}
+                  >
+                    <img loading="lazy" alt={media.filename} src={media.url} />
+                  </a>
+                )}
+                <figcaption>
+                  <span>{media.filename}</span>
+                  <a
+                    href={media.url}
+                    download={media.filename}
+                    aria-label={media.filename + ' herunterladen'}
+                    title="Originaldatei herunterladen"
+                  >
+                    <Download size={14} />
+                  </a>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+      </div>
       {entry.stop_ids.length > 0 && (
         <div className="journal-place-links">
           {entry.stop_ids.map((id) => {

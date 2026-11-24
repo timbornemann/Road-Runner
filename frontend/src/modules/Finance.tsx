@@ -160,22 +160,24 @@ export default function Finance({
         action="Ausgabe erfassen"
         onAction={() => setEditor({})}
       />
-      <div className="rr-m-metrics">
-        <Metric icon={Banknote} label="Bereits bezahlt" value={moneyLabel(paid, base)} />
-        <Metric icon={CalendarClock} label="Noch geplant" value={moneyLabel(planned, base)} />
-        <Metric icon={Wallet} label="Nach Planung verfügbar" value={moneyLabel(remaining, base)} />
+      <div className="rr-m-summary">
+        <div className="rr-m-metrics">
+          <Metric icon={Banknote} label="Bereits bezahlt" value={moneyLabel(paid, base)} />
+          <Metric icon={CalendarClock} label="Noch geplant" value={moneyLabel(planned, base)} />
+          <Metric icon={Wallet} label="Nach Planung verfügbar" value={moneyLabel(remaining, base)} />
+        </div>
+        <section className="rr-m-budget">
+          <div>
+            <strong>Reisebudget</strong>
+            <span>{moneyLabel(total, base)}</span>
+          </div>
+          <div className="rr-m-track" aria-hidden="true">
+            <span style={{ width: `${booked}%` }} />
+            <i style={{ width: `${reserved}%` }} />
+          </div>
+          <small>{moneyLabel(paid + planned, base)} durch Buchungen belegt</small>
+        </section>
       </div>
-      <section className="rr-m-budget">
-        <div>
-          <strong>Reisebudget</strong>
-          <span>{moneyLabel(total, base)}</span>
-        </div>
-        <div className="rr-m-track" aria-hidden="true">
-          <span style={{ width: `${booked}%` }} />
-          <i style={{ width: `${reserved}%` }} />
-        </div>
-        <small>{moneyLabel(paid + planned, base)} durch Buchungen belegt</small>
-      </section>
       <Card
         title="Ausgabenbuch"
         action={

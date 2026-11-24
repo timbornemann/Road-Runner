@@ -7,11 +7,41 @@
   --mod-line: var(--line, #dfe4dc);
   color: var(--mod-ink);
 }
-.rr-module {
+.module-workspace {
+  container: module-page / inline-size;
+}
+.rr-module,
+.rr-m-summary,
+.rr-m-records {
   display: grid;
   align-content: start;
   gap: 22px;
   min-width: 0;
+}
+@container module-page (min-width: 68rem) {
+  .rr-module {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 23%);
+    align-items: start;
+  }
+  .rr-module > .rr-m-header {
+    grid-column: 1 / -1;
+  }
+  .rr-module > :is(.rr-m-summary, .rr-m-metrics) {
+    grid-area: 2 / 2;
+  }
+  .rr-module > :is(.rr-m-card, .rr-m-records) {
+    grid-area: 2 / 1;
+  }
+  .rr-module .rr-m-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rr-m-summary {
+    gap: 14px;
+  }
+  :is(.module-finance, .module-mobility) .rr-m-row .rr-m-actions {
+    min-width: 103px;
+    justify-content: flex-end;
+  }
 }
 .rr-m-header {
   display: flex;
@@ -139,6 +169,21 @@
 .rr-m-card {
   min-width: 0;
   overflow: hidden;
+  container: records / inline-size;
+}
+@container records (min-width: 62rem) {
+  :is(.module-purchases, .module-pantry) .rr-m-list-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(29rem, 1fr));
+  }
+  .rr-m-list-group .rr-m-group-name {
+    grid-column: 1 / -1;
+  }
+  :is(.module-purchases, .module-pantry) .rr-m-list-group > :is(.rr-m-row, .rr-m-shopping-row) {
+    min-width: 0;
+    border: 0;
+    box-shadow: inset -1px -1px var(--mod-line);
+  }
 }
 .rr-m-card-head {
   display: flex;
@@ -205,6 +250,7 @@
 .rr-m-row-total small,
 .rr-m-shopping-check small {
   display: block;
+  overflow-wrap: anywhere;
 }
 .rr-m-row-total {
   text-align: right;
@@ -561,7 +607,9 @@
   }
 }
 @media (max-width: 650px) {
-  .rr-module {
+  .rr-module,
+  .rr-m-summary,
+  .rr-m-records {
     gap: 15px;
   }
   .rr-m-header {

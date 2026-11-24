@@ -14,7 +14,7 @@ export function JournalMap({ data, open }: { data: TripData; open: (stop: Stop) 
   const places = data.stops.filter(stop => stop.id === stop.place_id && visited.has(stop.id))
   const mapped = places.filter((stop) => stop.lat != null && stop.lon != null)
   return (
-    <section className="journal-panel">
+    <section className={mapped.length ? 'journal-panel journal-atlas' : 'journal-panel'}>
       <div className="journal-section-title">
         <MapPin size={20} />
         <h2>Besuchte Orte</h2>
@@ -134,19 +134,19 @@ export function FavoritePlaces({
       <div className="journal-section-title">
         <Heart size={20} />
         <h2>Lieblingsplätze aller Reisen</h2>
+        {!!favorites.length && (
+          <label className="journal-search">
+            <Search size={16} />
+            <input
+              type="search"
+              aria-label="Lieblingsplätze durchsuchen"
+              placeholder="Ort oder Reise suchen"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+        )}
       </div>
-      {!!favorites.length && (
-        <label className="journal-search">
-          <Search size={16} />
-          <input
-            type="search"
-            aria-label="Lieblingsplätze durchsuchen"
-            placeholder="Ort oder Reise suchen"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-      )}
       {error && (
         <p className="error" role="alert">
           {error}{' '}

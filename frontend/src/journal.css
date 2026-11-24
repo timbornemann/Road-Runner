@@ -3,6 +3,7 @@
   --journal-rule: #d9d1bc;
   --journal-serif: 'Spectral', Georgia, serif;
   color: var(--ink);
+  container: journal / inline-size;
 }
 .journal-heading,
 .journal-tabs,
@@ -63,7 +64,7 @@
 }
 .journal-book {
   display: grid;
-  grid-template-columns: minmax(185px, 0.75fr) minmax(0, 1.6fr);
+  grid-template-columns: clamp(185px, 27%, 23rem) minmax(0, 1fr);
   isolation: isolate;
   color: var(--journal-ink);
   position: relative;
@@ -183,6 +184,7 @@
 .journal-reading {
   display: flex;
   flex-direction: column;
+  container: journal-page / inline-size;
   min-height: 440px;
   border-radius: 0 9px 8px 0;
   background: linear-gradient(to right, #e8e2d1 0, #faf7ee 3.5%, #fcfaf2 15%, #faf7ed 100%);
@@ -238,6 +240,21 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: 17px/1.7 var(--journal-serif);
+}
+.journal-prose {
+  max-inline-size: 74ch;
+}
+@container journal-page (min-width: 54rem) {
+  .journal-note-body:has(.journal-prose + .journal-gallery) {
+    clear: both;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    column-gap: clamp(1.25rem, 3cqi, 3rem);
+  }
+  .journal-note-body .journal-prose + .journal-gallery {
+    padding-top: 5px;
+  }
 }
 .journal-gallery {
   display: grid;
@@ -365,6 +382,11 @@
 .journal-section-title {
   gap: 8px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.journal-section-title .journal-search {
+  flex: 0 1 24rem;
+  margin: 0 0 0 auto;
 }
 .journal-section-title h2 {
   font-size: 20px;
@@ -387,6 +409,36 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(245px, 100%), 1fr));
   gap: 9px;
+}
+@container journal (min-width: 58rem) {
+  .journal-atlas {
+    --journal-map-height: clamp(22rem, 62dvh, 50rem);
+    display: grid;
+    grid-template-columns: minmax(16rem, 30%) minmax(0, 1fr);
+    grid-template-areas: 'title title' 'places map';
+    column-gap: 1.25rem;
+  }
+  .journal-atlas .journal-section-title {
+    grid-area: title;
+  }
+  .journal-atlas .journal-map {
+    grid-area: map;
+    height: var(--journal-map-height);
+    margin: 0;
+  }
+  .journal-atlas .journal-places-list {
+    grid-area: places;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    max-height: var(--journal-map-height);
+    overflow: auto;
+  }
+}
+@container journal (max-width: 42rem) {
+  .journal-section-title .journal-search {
+    flex-basis: 100%;
+    margin-top: 0.25rem;
+  }
 }
 .journal-place-row,
 .journal-favorites article {
@@ -632,7 +684,7 @@
     padding-inline: 21px;
   }
 }
-@media (max-width: 650px) {
+@container journal (max-width: 40rem) {
   .journal-heading {
     align-items: flex-end;
     gap: 7px;
@@ -716,15 +768,17 @@
     width: 42px;
     height: 42px;
   }
-  .journal-field-pair {
-    grid-template-columns: 1fr;
-  }
 }
-@media (max-width: 365px) {
+@container journal (max-width: 23rem) {
   .journal-heading {
     flex-wrap: wrap;
   }
   .journal-tabs button {
     padding-inline: 5px;
+  }
+}
+@media (max-width: 650px) {
+  .journal-field-pair {
+    grid-template-columns: 1fr;
   }
 }

@@ -238,148 +238,150 @@ export default function Pantry() {
         <Metric icon={ClipboardList} label="Auf der Einkaufsliste" value={String(open.length)} />
         <Metric icon={ReceiptText} label="Einkaufsbelege" value={String(receipts.length)} />
       </div>
-      <div className="rr-m-toolrow">
-        <Tabs
-          value={tab}
-          onChange={setTab}
-          tabs={[
-            { value: 'pantry', label: 'Vorrat' },
-            { value: 'shopping', label: 'Einkaufsliste' },
-          ]}
-        />
-      </div>
-      {tab === 'pantry' ? (
-        <Card title="Lebensmittelvorrat">
-          <TaggedList
-            items={stock}
-            emptyIcon={Package}
-            emptyText="Erfasse die Lebensmittel, die du auf dieser Reise dabeihast."
-          >
-            {(item) => (
-              <Row
-                key={item.id}
-                target={{kind: 'pantry', id: item.id}}
-                icon={Package}
-                title={item.name}
-                amount={`${qty(item.quantity)} ${item.unit}`}
-                actions={
-                  <>
-                    {item.quantity > 0 && (
-                      <IconButton
-                        icon={CircleMinus}
-                        label={`${item.name} verbrauchen`}
-                        onClick={() => setConsume(item)}
-                      />
-                    )}
-                    <IconButton
-                      icon={ShoppingCart}
-                      label={`${item.name} nachkaufen`}
-                      onClick={() => setEditor({ shelf: 'shopping', prefill: item })}
-                    />
-                    <IconButton
-                      icon={Pencil}
-                      label={`${item.name} bearbeiten`}
-                      onClick={() => setEditor({ shelf: 'pantry', item })}
-                    />
-                    <IconButton
-                      icon={Trash2}
-                      label={`${item.name} löschen`}
-                      onClick={() => setRemove({ shelf: 'pantry', item })}
-                      danger
-                    />
-                  </>
-                }
-              >
-                <TagChips tags={item.tags} />
-              </Row>
-            )}
-          </TaggedList>
-        </Card>
-      ) : (
-        <>
-          <Card
-            title="Einkaufsliste"
-            action={
-              selection.length > 0 ? (
-                <button className="rr-m-button primary compact" onClick={() => setCheckout(selection)}>
-                  <CheckCheck size={16} />
-                  Einkauf abschließen ({selection.length})
-                </button>
-              ) : undefined
-            }
-          >
-            {open.length > 0 && (
-              <p className="rr-m-card-tip">
-                Markiere die gekauften Artikel und schließe den Einkauf mit dem Bon-Gesamtbetrag ab.
-              </p>
-            )}
-            <TaggedList items={open} emptyIcon={ShoppingBasket} emptyText="Deine Einkaufsliste ist leer.">
+      <div className="rr-m-records">
+        <div className="rr-m-toolrow">
+          <Tabs
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { value: 'pantry', label: 'Vorrat' },
+              { value: 'shopping', label: 'Einkaufsliste' },
+            ]}
+          />
+        </div>
+        {tab === 'pantry' ? (
+          <Card title="Lebensmittelvorrat">
+            <TaggedList
+              items={stock}
+              emptyIcon={Package}
+              emptyText="Erfasse die Lebensmittel, die du auf dieser Reise dabeihast."
+            >
               {(item) => (
-                <div className="rr-m-shopping-row" key={item.id}>
-                  <label className="rr-m-shopping-check">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(item.id)}
-                      onChange={() => toggle(item.id)}
-                    />
-                    <span>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {qty(item.quantity)} {item.unit}
-                      </small>
-                      <TagChips tags={item.tags} />
-                    </span>
-                  </label>
-                  <NotebookBacklinks target={{kind: 'shopping', id: item.id}} />
-                  <div className="rr-m-actions">
-                    <IconButton
-                      icon={Pencil}
-                      label={`${item.name} bearbeiten`}
-                      onClick={() => setEditor({ shelf: 'shopping', item })}
-                    />
-                    <IconButton
-                      icon={Trash2}
-                      label={`${item.name} löschen`}
-                      onClick={() => setRemove({ shelf: 'shopping', item })}
-                      danger
-                    />
-                  </div>
-                </div>
+                <Row
+                  key={item.id}
+                  target={{kind: 'pantry', id: item.id}}
+                  icon={Package}
+                  title={item.name}
+                  amount={`${qty(item.quantity)} ${item.unit}`}
+                  actions={
+                    <>
+                      {item.quantity > 0 && (
+                        <IconButton
+                          icon={CircleMinus}
+                          label={`${item.name} verbrauchen`}
+                          onClick={() => setConsume(item)}
+                        />
+                      )}
+                      <IconButton
+                        icon={ShoppingCart}
+                        label={`${item.name} nachkaufen`}
+                        onClick={() => setEditor({ shelf: 'shopping', prefill: item })}
+                      />
+                      <IconButton
+                        icon={Pencil}
+                        label={`${item.name} bearbeiten`}
+                        onClick={() => setEditor({ shelf: 'pantry', item })}
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label={`${item.name} löschen`}
+                        onClick={() => setRemove({ shelf: 'pantry', item })}
+                        danger
+                      />
+                    </>
+                  }
+                >
+                  <TagChips tags={item.tags} />
+                </Row>
               )}
             </TaggedList>
           </Card>
-          {purchased.length > 0 && <Card title="Eingekaufte Artikel im Planungsheft">
-            {purchased.map(item => <Row key={item.id} title={item.name} detail="Eingekauft" target={{kind: 'shopping', id: item.id}} />)}
-          </Card>}
-          {receipts.length > 0 && (
-            <Card title="Einkaufsbelege">
-              <TaggedList
-                items={receipts}
-                emptyIcon={ReceiptText}
-                emptyText="Für diese Reise liegen keine Einkaufsbelege vor."
-              >
-                {(r) => (
-                  <Row
-                    key={r.id}
-                    icon={ReceiptText}
-                    title={r.title}
-                    sub={todayLabel(r.date)}
-                    amount={moneyLabel(r.base_amount, data.trip.currency)}
-                    detail={r.currency !== data.trip.currency ? moneyLabel(r.amount, r.currency) : undefined}
-                  >
-                    <TagChips tags={r.tags} />
-                    {!!r.items?.length && (
-                      <small>
-                        {r.items.map((i) => `${qty(i.quantity)} ${i.unit} ${i.name}`.trim()).join(' · ')}
-                      </small>
-                    )}
-                  </Row>
+        ) : (
+          <>
+            <Card
+              title="Einkaufsliste"
+              action={
+                selection.length > 0 ? (
+                  <button className="rr-m-button primary compact" onClick={() => setCheckout(selection)}>
+                    <CheckCheck size={16} />
+                    Einkauf abschließen ({selection.length})
+                  </button>
+                ) : undefined
+              }
+            >
+              {open.length > 0 && (
+                <p className="rr-m-card-tip">
+                  Markiere die gekauften Artikel und schließe den Einkauf mit dem Bon-Gesamtbetrag ab.
+                </p>
+              )}
+              <TaggedList items={open} emptyIcon={ShoppingBasket} emptyText="Deine Einkaufsliste ist leer.">
+                {(item) => (
+                  <div className="rr-m-shopping-row" key={item.id}>
+                    <label className="rr-m-shopping-check">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(item.id)}
+                        onChange={() => toggle(item.id)}
+                      />
+                      <span>
+                        <strong>{item.name}</strong>
+                        <small>
+                          {qty(item.quantity)} {item.unit}
+                        </small>
+                        <TagChips tags={item.tags} />
+                      </span>
+                    </label>
+                    <NotebookBacklinks target={{kind: 'shopping', id: item.id}} />
+                    <div className="rr-m-actions">
+                      <IconButton
+                        icon={Pencil}
+                        label={`${item.name} bearbeiten`}
+                        onClick={() => setEditor({ shelf: 'shopping', item })}
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label={`${item.name} löschen`}
+                        onClick={() => setRemove({ shelf: 'shopping', item })}
+                        danger
+                      />
+                    </div>
+                  </div>
                 )}
               </TaggedList>
             </Card>
-          )}
-        </>
-      )}
+            {purchased.length > 0 && <Card title="Eingekaufte Artikel im Planungsheft">
+              {purchased.map(item => <Row key={item.id} title={item.name} detail="Eingekauft" target={{kind: 'shopping', id: item.id}} />)}
+            </Card>}
+            {receipts.length > 0 && (
+              <Card title="Einkaufsbelege">
+                <TaggedList
+                  items={receipts}
+                  emptyIcon={ReceiptText}
+                  emptyText="Für diese Reise liegen keine Einkaufsbelege vor."
+                >
+                  {(r) => (
+                    <Row
+                      key={r.id}
+                      icon={ReceiptText}
+                      title={r.title}
+                      sub={todayLabel(r.date)}
+                      amount={moneyLabel(r.base_amount, data.trip.currency)}
+                      detail={r.currency !== data.trip.currency ? moneyLabel(r.amount, r.currency) : undefined}
+                    >
+                      <TagChips tags={r.tags} />
+                      {!!r.items?.length && (
+                        <small>
+                          {r.items.map((i) => `${qty(i.quantity)} ${i.unit} ${i.name}`.trim()).join(' · ')}
+                        </small>
+                      )}
+                    </Row>
+                  )}
+                </TaggedList>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
       {editor && <ItemForm {...editor} onClose={() => setEditor(null)} />}{' '}
       {consume && <Consume item={consume} onClose={() => setConsume(null)} />}{' '}
       {checkout && (

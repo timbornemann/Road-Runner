@@ -136,6 +136,7 @@ export default function PlacesMap(props: Props) {
     observer.observe(host.current)
     return () => {
       observer.disconnect()
+      map.off('moveend zoomend resize', view)
       map.remove()
       groupRef.current = null
       markers.current.clear()
