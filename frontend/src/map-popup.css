@@ -1,0 +1,72 @@
+.pl-map-fullscreen,
+.pl-map-fullscreen body {
+  overflow: hidden;
+}
+.pl-map-fullscreen .app-frame > .sidebar,
+.pl-map-fullscreen .workspace > .topbar {
+  visibility: hidden;
+}
+.pl-point-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 13px;
+  box-shadow: 0 3px 22px #153a2a38;
+}
+.pl-point-popup .leaflet-popup-content {
+  margin: 0;
+}
+.pl-popup-body {
+  position: relative;
+  font-family: var(--display);
+  color: var(--ink);
+  outline: none;
+}
+.pl-popup-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-height: var(--pl-popup-height);
+  border-radius: 13px;
+  padding: 16px;
+  scrollbar-width: thin;
+}
+.pl-popup-close {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  border-radius: 50%;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+}
+.pl-popup-close:hover,
+.pl-popup-choices button:hover {
+  background: #edf3e9;
+  color: var(--forest);
+}
+.pl-popup-choices h2 {
+  margin: 0 29px 10px 0;
+  font-size: 1.05rem;
+}
+.pl-popup-choices button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 42px;
+  padding: 7px;
+  text-align: left;
+  color: var(--forest);
+  background: white;
+  border: 0;
+  border-top: 1px solid var(--line);
+  font-size: .88rem;
+}
+.pl-popup-choices button span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

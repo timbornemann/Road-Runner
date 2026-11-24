@@ -1,0 +1,87 @@
+.pl-place-card {
+  display: grid;
+  gap: 11px;
+  min-width: 0;
+  color: var(--ink);
+  font: 400 0.88rem/1.45 var(--display);
+  overflow-wrap: anywhere;
+}
+.pl-place-card p,
+.pl-place-card .tag-chips {
+  margin: 0;
+}
+.pl-place-card .pl-place-title {
+  padding-right: 19px;
+  gap: 10px;
+}
+.pl-place-card .pl-place-title small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.pl-place-card .pl-place-title h2 {
+  font-size: 1.17rem;
+}
+.pl-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pl-card-actions .btn {
+  flex: 1 1 auto;
+  padding: 7px 8px;
+  font-size: 0.81rem;
+}
+.pl-card-actions .pl-card-tool {
+  flex: 0 0 40px;
+  color: var(--green);
+}
+.pl-place-card .pl-cover {
+  display: block;
+  height: 122px;
+}
+.pl-card-location {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+}
+.pl-card-location .pl-coords {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+.pl-place-card .pl-links a,
+.pl-card-footer a {
+  color: var(--green);
+  text-underline-offset: 2px;
+}
+.pl-place-card .notebook-backlinks:empty,
+.pl-card-footer:empty {
+  display: none;
+}
+.pl-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 5px;
+}
+.pl-card-footer .btn-icon {
+  margin-left: auto;
+  color: var(--muted);
+}
+.pl-card-footer .btn-icon:hover {
+  color: #9b382b;
+  background: #fbefeb;
+}
+@media (pointer: coarse) {
+  .pl-card-actions .btn,
+  .pl-card-footer .btn-icon {
+    min-height: 44px;
+  }
+  .pl-card-actions .pl-card-tool {
+    flex-basis: 44px;
+  }
+  .pl-card-footer .btn-icon {
+    width: 44px;
+  }
+}

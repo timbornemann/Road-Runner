@@ -271,7 +271,7 @@ function App() {
           </div>
         </div>
       </aside>
-      <div className="workspace">
+      <div className={'workspace' + (page === 'places' && data ? ' places-workspace' : '')}>
         <header className="topbar">
           <div className="breadcrumbs">
             <button
@@ -288,7 +288,7 @@ function App() {
               Meine Reisen
             </button>
             <ChevronRight size={13} />
-            <strong>{current.label}</strong>
+            {page === 'places' && data ? <h1>{current.label}</h1> : <strong>{current.label}</strong>}
           </div>
           <div className="bar-actions">
             <span className="today-date">

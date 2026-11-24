@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Layers3 } from 'lucide-react'
+import { ChevronRight, Layers3, MapPin } from 'lucide-react'
 import type { Place } from './shared'
 import { categoryIcon, iconBody, type PlaceIcons, type SymbolType } from './PlaceSymbols'
+import MapPointPopup from './MapPointPopup'
 
 export interface GeoResult {
   title: string
@@ -29,6 +30,7 @@ interface Props {
   places: Place[]
   results: GeoResult[]
   focus: Focus | null
+  contextKey: string
   selectedId?: number
   icons: PlaceIcons
   onPlace: (place: Place) => void
@@ -36,6 +38,17 @@ interface Props {
   onClick: (coords: [number, number]) => void
   onMove: (view: Viewport) => void
   placing: boolean
+  popup: { key: string; coords: [number, number]; content: ReactNode } | null
+  onDismissPopup: () => void
+}
+interface Point {
+  lat: number
+  lon: number
+  title: string
+  type: SymbolType
+  value: string
+  style: string
+  select: () => void
 }
 function pin(type: SymbolType, value: string, icons: PlaceIcons, variant: string, count: number) {
   const inner = document.createElement('span')
@@ -62,8 +75,12 @@ function pin(type: SymbolType, value: string, icons: PlaceIcons, variant: string
 }
 export default function PlacesMap(props: Props) {
   const host = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
+  const [map, setMap] = useState<L.Map | null>(null)
   const groupRef = useRef<L.LayerGroup | null>(null)
+  const markers = useRef(new Map<string, L.Marker>())
+  const [stack, setStack] = useState<string | null>(null)
+  const stackRef = useRef<string | null>(null)
+  stackRef.current = stack
   const latest = useRef(props)
   latest.current = props
   const [tilesMissing, setTilesMissing] = useState(false)
@@ -78,7 +95,7 @@ export default function PlacesMap(props: Props) {
   useEffect(() => {
     if (!host.current) return
     const map = L.map(host.current, { zoomControl: false, minZoom: 2, worldCopyJump: true })
-    mapRef.current = map
+    setMap(map)
     overview(map, latest.current.places)
     L.control
       .zoom({ position: 'topright', zoomInTitle: 'Vergrößern', zoomOutTitle: 'Verkleinern' })
@@ -106,6 +123,11 @@ export default function PlacesMap(props: Props) {
     }
     map.on('moveend zoomend resize', view)
     map.on('click', (e: L.LeafletMouseEvent) => {
+      if (!latest.current.placing && (latest.current.popup || stackRef.current)) {
+        latest.current.onDismissPopup()
+        setStack(null)
+        return
+      }
       const point = e.latlng.wrap()
       latest.current.onClick([Number(point.lat.toFixed(6)), Number(point.lng.toFixed(6))])
     })
@@ -115,23 +137,11 @@ export default function PlacesMap(props: Props) {
     return () => {
       observer.disconnect()
       map.remove()
-      mapRef.current = null
       groupRef.current = null
+      markers.current.clear()
     }
   }, [])
-  useEffect(() => {
-    const group = groupRef.current
-    if (!group) return
-    group.clearLayers()
-    interface Point {
-      lat: number
-      lon: number
-      title: string
-      type: SymbolType
-      value: string
-      style: string
-      select: () => void
-    }
+  const positions = useMemo(() => {
     const positions = new Map<string, Point[]>()
     function add(point: Point) {
       const key = point.lat + ',' + point.lon
@@ -158,11 +168,18 @@ export default function PlacesMap(props: Props) {
         title: r.title,
         type: 'lucide',
         value: categoryIcon(r.category),
-        style: 'external',
+        style: props.popup?.key === 'geo/' + geoKey(r) ? 'selected' : 'external',
         select: () => latest.current.onResult(r),
       }),
     )
-    positions.forEach((points) => {
+    return positions
+  }, [props.places, props.results, props.selectedId, props.popup?.key])
+  useEffect(() => {
+    const group = groupRef.current
+    if (!group) return
+    group.clearLayers()
+    markers.current.clear()
+    positions.forEach((points, key) => {
       const front = points.find((p) => p.style === 'selected') ?? points[0]
       const name = points.length === 1 ? front.title : points.length + ' Orte an dieser Position'
       const tooltip = document.createElement('span')
@@ -175,32 +192,69 @@ export default function PlacesMap(props: Props) {
       })
         .addTo(group)
         .bindTooltip(tooltip, { direction: 'top', offset: [0, -23] })
-      if (points.length === 1) {
-        marker.on('click', front.select)
-        return
-      }
-      const menu = document.createElement('div')
-      menu.className = 'rr-overlapping-pins'
-      for (const point of points) {
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.textContent = point.title
-        button.onclick = () => {
-          marker.closePopup()
-          point.select()
+      markers.current.set(key, marker)
+      function activate() {
+        marker.closeTooltip()
+        if (latest.current.placing) {
+          latest.current.onClick([front.lat, front.lon])
+        } else if (points.length === 1) {
+          setStack(null)
+          front.select()
+        } else {
+          latest.current.onDismissPopup()
+          setStack(key)
         }
-        menu.append(button)
       }
-      marker.bindPopup(menu)
+      marker.on('click', activate)
+      marker.getElement()?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        event.stopPropagation()
+        if (!event.repeat) activate()
+      })
     })
-  }, [props.places, props.results, props.icons, props.selectedId])
+  }, [positions, props.icons])
   useEffect(() => {
-    const map = mapRef.current
+    setStack(null)
     if (!map || !props.focus) return
-    if ('coords' in props.focus)
-      map.setView(props.focus.coords, Math.max(13, map.getZoom()), { animate: false })
-    else overview(map, latest.current.places)
-  }, [props.focus])
+    if ('coords' in props.focus) {
+      const coords = props.focus.coords
+      map.setView(coords, Math.max(13, map.getZoom()), { animate: false })
+      // Selecting the same list row again recenters the pin beneath its open card.
+      // Let Leaflet fit the full card inside this new view, too.
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Popup) layer.setLatLng(coords)
+      })
+    } else overview(map, latest.current.places)
+  }, [map, props.focus])
+  useEffect(() => {
+    setStack(null)
+  }, [props.contextKey, props.placing])
+  const choices = stack ? positions.get(stack) : undefined
+  const choice = choices?.[0]
+  const popup = props.popup ?? (choice && choices ? {
+    key: 'stack/' + stack,
+    coords: [choice.lat, choice.lon] as [number, number],
+    content: (
+      <div className="pl-popup-choices">
+        <h2>Orte an diesem Punkt</h2>
+        {choices.map((point, index) => (
+          <button key={index} type="button" onClick={() => { setStack(null); point.select() }}>
+            <MapPin size={15} /><span>{point.title}</span><ChevronRight size={15} />
+          </button>
+        ))}
+      </div>
+    ),
+  } : null)
+  function closePopup() {
+    const markerKey = popup?.coords.join(',')
+    setStack(null)
+    latest.current.onDismissPopup()
+    requestAnimationFrame(() => {
+      const target = (markerKey && markers.current.get(markerKey)?.getElement()) || host.current
+      target?.focus({ preventScroll: true })
+    })
+  }
   return (
     <div className={'pl-map' + (props.placing ? ' placing' : '')}>
       <div
@@ -208,6 +262,12 @@ export default function PlacesMap(props: Props) {
         ref={host}
         aria-label="Ortekarte mit gespeicherten Orten und Suchtreffern"
       />
+      {map && popup && (
+        <MapPointPopup key={popup.key} map={map} coords={popup.coords} onClose={closePopup}
+          label={props.popup ? 'Ortsdetails' : 'Ort auswählen'}>
+          {popup.content}
+        </MapPointPopup>
+      )}
       {tilesMissing && (
         <span className="pl-tile-status" role="status">
           <Layers3 size={14} /> Kartenhintergrund nicht erreichbar
