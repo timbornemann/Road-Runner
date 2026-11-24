@@ -303,6 +303,7 @@ export default function Mobility({ startFuel, onHandled }: { startFuel: boolean;
             return (
               <Row
                 key={r.id}
+                target={{kind: 'mobility', id: r.id}}
                 icon={icons[r.kind] ?? CarFront}
                 title={r.title}
                 sub={details.join(' · ')}

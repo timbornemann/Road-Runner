@@ -1,3 +1,4 @@
+import { NotebookBacklinks } from './NotebookNavigation'
 import { useState, type FormEvent } from 'react'
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import { api, Modal, type RouteStage, type RouteVariant } from './shared'
@@ -113,7 +114,7 @@ export default function StageManager({
           {stages.map((stage, index) => (
             <section className="rr-stage-admin" key={stage.id}>
               <div className="rr-stage-admin-row">
-                <strong>{stage.name}</strong>
+                <div><strong>{stage.name}</strong><NotebookBacklinks target={{kind: 'stage', id: stage.id}} /></div>
                 <button
                   className="btn-icon"
                   aria-label={stage.name + ' nach oben'}
@@ -134,7 +135,7 @@ export default function StageManager({
               </div>
               {stage.variants.map((variant) => (
                 <div key={variant.id} className="rr-stage-admin-row rr-stage-admin-variant">
-                  <span>{variant.name}</span>
+                  <div><span>{variant.name}</span><NotebookBacklinks target={{kind: 'variant', id: variant.id}} /></div>
                   {stage.active_variant_id === variant.id && (
                     <small>
                       <Check size={12} /> Aktiv

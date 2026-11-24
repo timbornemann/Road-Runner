@@ -1,3 +1,4 @@
+import { NotebookBacklinks, useNotebookNavigation } from '../NotebookNavigation'
 import { useState } from 'react'
 import { TagChips, TagEditor, tripTags } from '../Tags'
 import TaggedList from './TaggedList'
@@ -201,7 +202,8 @@ function Checkout({
 
 export default function Pantry() {
   const { data, save } = useTrip()
-  const [tab, setTab] = useState<Shelf>('pantry')
+  const { target, index } = useNotebookNavigation()
+  const [tab, setTab] = useState<Shelf>(target?.kind === 'shopping' ? 'shopping' : 'pantry')
   const [editor, setEditor] = useState<Editor | null>(null)
   const [remove, setRemove] = useState<Editor | null>(null)
   const [consume, setConsume] = useState<Stock | null>(null)
@@ -210,6 +212,9 @@ export default function Pantry() {
   const stock = data.pantry.slice().sort((a, b) => a.name.localeCompare(b.name, 'de'))
   const open = data.shopping.filter((i) => !i.done && i.quantity > 0)
   const selection = open.filter((i) => selected.includes(i.id))
+  const purchased = data.shopping.filter(item => item.done && (
+    (target?.kind === 'shopping' && target.id === item.id) || index.get('shopping/' + item.id)?.backlinks.length
+  ))
   const receipts = data.expenses
     .filter((e) => e.source_type === 'shopping')
     .slice()
@@ -253,6 +258,7 @@ export default function Pantry() {
             {(item) => (
               <Row
                 key={item.id}
+                target={{kind: 'pantry', id: item.id}}
                 icon={Package}
                 title={item.name}
                 amount={`${qty(item.quantity)} ${item.unit}`}
@@ -324,6 +330,7 @@ export default function Pantry() {
                       <TagChips tags={item.tags} />
                     </span>
                   </label>
+                  <NotebookBacklinks target={{kind: 'shopping', id: item.id}} />
                   <div className="rr-m-actions">
                     <IconButton
                       icon={Pencil}
@@ -341,6 +348,9 @@ export default function Pantry() {
               )}
             </TaggedList>
           </Card>
+          {purchased.length > 0 && <Card title="Eingekaufte Artikel im Planungsheft">
+            {purchased.map(item => <Row key={item.id} title={item.name} detail="Eingekauft" target={{kind: 'shopping', id: item.id}} />)}
+          </Card>}
           {receipts.length > 0 && (
             <Card title="Einkaufsbelege">
               <TaggedList

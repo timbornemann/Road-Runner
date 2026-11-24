@@ -1,3 +1,4 @@
+import { NotebookBacklinks, useNotebookNavigation } from './NotebookNavigation'
 import { useState } from 'react'
 import {
   BookOpen,
@@ -111,6 +112,7 @@ function JournalNote({
           })}
         </div>
       )}
+      <NotebookBacklinks target={{kind: 'journal', id: entry.id}} />
     </article>
   )
 }
@@ -127,7 +129,8 @@ export default function Journal({
   initialStop?: Stop
 }) {
   const [tab, setTab] = useState<Tab>('Tagebuch')
-  const [chosenDay, setChosenDay] = useState('')
+  const { target } = useNotebookNavigation()
+  const [chosenDay, setChosenDay] = useState(() => target?.kind === 'journal' ? data.journal_entries.find(e => e.id === target.id)?.date ?? '' : '')
   const [editor, setEditor] = useState<Editor | null>(initialStop ? { initialStop } : null)
   const [detailId, setDetailId] = useState<number | null>(null)
   const [deleteEntry, setDeleteEntry] = useState<JournalEntry | null>(null)

@@ -21,7 +21,7 @@ COLLECTIONS = {
 }
 COSTED = {"purchases", "mobility"}
 MONEY_FIELDS = {"budget", "estimated_cost", "amount", "base_amount"}
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def data_file():
@@ -74,6 +74,9 @@ def initialize():
             from . import journal
             journal.migrate(con)
             stages.migrate(con)
+        if version < 4:
+            from . import notebook_schema
+            notebook_schema.migrate(con)
         if version == 0:
             from .seed import seed_demo
             seed_demo(con)
@@ -191,9 +194,9 @@ def record(con, tid, group, rid):
 
 
 def aggregate(con, tid):
-    from . import journal
+    from . import journal, notebook
     return {"trip": trip(con, tid), **journal.trip_data(con, tid), **{group: records(con, tid, group) for group in COLLECTIONS},
-            "stages": stages.stage_data(con, tid)}
+            "stages": stages.stage_data(con, tid), "notebook": notebook.trip_data(con, tid)}
 
 
 def put(con, tid, group, data):

@@ -8,7 +8,7 @@ from fastapi import Body, FastAPI, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import integrations, journal, journal_media, models, stages, store
+from . import integrations, journal, journal_media, models, notebook, stages, store
 from .mcp_server import MCPRoute, mcp_lifespan
 
 
@@ -20,7 +20,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Road Runner", version="1.1.0", lifespan=lifespan)
-EXPORT_SCHEMA_VERSION = 3
+EXPORT_SCHEMA_VERSION = 4
 
 for mcp_path in ("/mcp", "/mcp/"):
     app.add_route(mcp_path, MCPRoute(), include_in_schema=False)
@@ -77,6 +77,7 @@ def export_trip(tid: int):
 
 app.include_router(stages.router)
 app.include_router(journal.router)
+app.include_router(notebook.router)
 app.include_router(integrations.router)
 
 

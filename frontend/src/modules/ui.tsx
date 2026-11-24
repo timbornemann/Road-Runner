@@ -1,3 +1,5 @@
+import { NotebookBacklinks } from '../NotebookNavigation'
+import type { NotebookTarget } from '../NotebookTypes'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   ArrowDownLeft,
@@ -96,6 +98,7 @@ export function Empty({ icon: Icon = CircleHelp, text }: { icon?: LucideIcon; te
   )
 }
 export function Row({
+  target,
   icon: Icon,
   title,
   sub,
@@ -105,6 +108,7 @@ export function Row({
   children,
 }: {
   icon?: LucideIcon
+  target?: NotebookTarget
   title: string
   sub?: string
   amount?: string
@@ -123,6 +127,7 @@ export function Row({
         <strong>{title}</strong>
         {sub && <small>{sub}</small>}
         {children}
+        {target && <NotebookBacklinks target={target} />}
       </div>
       {(amount || detail) && (
         <div className="rr-m-row-total">

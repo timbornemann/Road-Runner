@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowDownToLine,
@@ -15,6 +15,7 @@ import {
   MapPinned,
   Menu,
   MountainSnow,
+  NotebookTabs,
   Package,
   Plus,
   Route as RouteIcon,
@@ -26,14 +27,19 @@ import '@fontsource-variable/dm-sans/wght.css'
 import './styles.css'
 import { AgentConnection, useAgentConnection } from './AgentConnection'
 import RouteView from './Route'
-import Journal from './Journal'
+import { hashDestination, NotebookNavigation, targetIndex, targetPages } from './NotebookNavigation'
+import './notebook-links.css'
+import type { NotebookTarget } from './NotebookTypes'
 import Modules from './Modules'
 import Overview, { type Page } from './Overview'
 import { TripChooser, TripEditor, tripStatus } from './Trips'
 import { api, type Stop, type Trip, type TripData } from './shared'
 
+const Notebook = lazy(() => import('./Notebook'))
+const Journal = lazy(() => import('./Journal'))
 const items = [
   { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
+  { id: 'notebook', label: 'Planungsheft', icon: NotebookTabs },
   { id: 'route', label: 'Route & Orte', icon: RouteIcon },
   { id: 'journal', label: 'Reisetagebuch', icon: BookOpen },
   { id: 'purchases', label: 'Anschaffungen', icon: Package },
@@ -42,7 +48,7 @@ const items = [
   { id: 'finance', label: 'Finanzen', icon: WalletCards },
 ] as const
 function hashPage(): Page {
-  const id = location.hash.slice(1)
+  const id = location.hash.slice(1).split('/')[0]
   return items.find((item) => item.id === id)?.id ?? 'overview'
 }
 function preferredTrip(trips: Trip[]) {
@@ -59,6 +65,7 @@ function preferredTrip(trips: Trip[]) {
 }
 function App() {
   const [page, setPage] = useState<Page>(hashPage)
+  const [target, setTarget] = useState<NotebookTarget | null>(() => hashDestination()?.target ?? null)
   const [trips, setTrips] = useState<Trip[]>([])
   const [data, setData] = useState<TripData | null>(null)
   const [ready, setReady] = useState(false)
@@ -70,7 +77,7 @@ function App() {
   const [quickAction, setQuickAction] = useState('')
   const [journalStop, setJournalStop] = useState<Stop>()
   const selected = useRef<number | undefined>(undefined)
-  const requestedTrip = useRef<number | undefined>(undefined)
+  const requestedTrip = useRef<number | undefined>(hashDestination()?.tripId)
   const version = useRef(0)
   const tripButton = useRef<HTMLButtonElement>(null)
   const menuButton = useRef<HTMLButtonElement>(null)
@@ -119,10 +126,13 @@ function App() {
     window.addEventListener('focus', refresh)
     const hash = () => {
       const nextPage = hashPage()
+      const destination = hashDestination()
+      if (destination?.tripId && destination.tripId !== selected.current) void load(destination.tripId).catch(() => {})
+      setTarget(destination?.target ?? null)
       setPage(nextPage)
       if (nextPage !== 'journal') setJournalStop(undefined)
       setDrawer(false)
-      window.scrollTo(0, 0)
+      if (!destination) window.scrollTo(0, 0)
     }
     window.addEventListener('hashchange', hash)
     return () => {
@@ -151,12 +161,18 @@ function App() {
     document.addEventListener('keydown', escape)
     return () => document.removeEventListener('keydown', escape)
   }, [drawer])
-  function go(to: Page) {
+  function go(to: Page, record: NotebookTarget | null = null) {
     if (to !== 'journal') setJournalStop(undefined)
-    location.hash = to
+    location.hash = record && data ? [to, record.kind, record.id, data.trip.id].join('/') : to
+    setTarget(record)
     setPage(to)
     setDrawer(false)
     window.scrollTo(0, 0)
+  }
+  function openRecord(record: NotebookTarget | null) {
+    setQuickAction('')
+    setJournalStop(undefined)
+    go(record ? targetPages[record.kind] : 'notebook', record)
   }
   function edit(trip: Trip) {
     setEditTrip(trip)
@@ -172,7 +188,9 @@ function App() {
     go('overview')
   }
   const current = items.find((i) => i.id === page)!
-  return (
+  const index = useMemo(() => targetIndex(data), [data])
+  const nativeKey = [data?.trip.id, page, target?.kind, target?.id].join('/')
+  const shell = (
     <div className="app-frame">
       {drawer && (
         <button className="drawer-shade" aria-label="Menü schließen" onClick={() => setDrawer(false)} />
@@ -306,9 +324,13 @@ function App() {
                   go(kind === 'expense' ? 'finance' : 'mobility')
                 }}
               />
+            ) : page === 'notebook' ? (
+              <Suspense fallback={<p role="status">Planungsheft wird geladen …</p>}>
+                <Notebook key={data.trip.id} data={data} reload={reload} notify={notify} target={target} onOpen={openRecord} />
+              </Suspense>
             ) : page === 'route' ? (
               <RouteView
-                key={data.trip.id}
+                key={nativeKey}
                 data={data}
                 reload={reload}
                 notify={notify}
@@ -318,16 +340,18 @@ function App() {
                 }}
               />
             ) : page === 'journal' ? (
-              <Journal
-                key={data.trip.id}
-                data={data}
-                reload={reload}
-                notify={notify}
-                initialStop={journalStop?.trip_id === data.trip.id ? journalStop : undefined}
-              />
+              <Suspense fallback={<p role="status">Reisetagebuch wird geladen …</p>}>
+                <Journal
+                  key={nativeKey}
+                  data={data}
+                  reload={reload}
+                  notify={notify}
+                  initialStop={journalStop?.trip_id === data.trip.id ? journalStop : undefined}
+                />
+              </Suspense>
             ) : (
               <Modules
-                key={data.trip.id + '-' + page}
+                key={nativeKey}
                 page={page}
                 data={data}
                 reload={reload}
@@ -388,6 +412,11 @@ function App() {
         </div>
       )}
     </div>
+  )
+  return (
+    <NotebookNavigation.Provider value={{ data, index, target, open: openRecord }}>
+      {shell}
+    </NotebookNavigation.Provider>
   )
 }
 createRoot(document.getElementById('root')!).render(<App />)

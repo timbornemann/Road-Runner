@@ -29,7 +29,7 @@ import {
 import { useTrip, type Purchase } from './context'
 import { MoneyFields, paymentBody, paymentValue } from './money'
 
-function PurchaseForm({
+export function PurchaseForm({
   item,
   complete,
   onClose,
@@ -192,6 +192,7 @@ export default function Purchases() {
             return (
               <Row
                 key={p.id}
+                target={{kind: 'purchase', id: p.id}}
                 icon={p.done ? CheckCheck : ShoppingBag}
                 title={p.title}
                 sub={`${qty(p.quantity)} ${p.unit || 'Stk.'}${p.notes ? ` · ${p.notes}` : ''}`}

@@ -202,6 +202,7 @@ export default function Finance({
           {(e) => (
             <Row
               key={e.id}
+              target={{kind: 'expense', id: e.id}}
               icon={categoryIcons[e.category] ?? (e.source_type === 'mobility' ? Fuel : CircleDollarSign)}
               title={e.title}
               sub={`${todayLabel(e.date)} · ${categories[e.category] ?? e.category}`}

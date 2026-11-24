@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import type { JournalEntry } from './journal-types'
+import type { NotebookData } from './NotebookTypes'
 
 export interface Trip {
   id: number
@@ -107,6 +108,7 @@ export interface ShoppingItem extends PantryItem {
   expense_id: number | null
 }
 export interface TripData {
+  notebook: NotebookData
   trip: Trip
   stops: Stop[]
   stages: RouteStage[]

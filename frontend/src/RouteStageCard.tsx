@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, MapPin, Plus } from 'lucide-react'
 import type { RouteStage, Stop } from './shared'
+import { NotebookBacklinks } from './NotebookNavigation'
 
 interface Props {
   stage: RouteStage
@@ -50,6 +51,7 @@ export default function RouteStageCard({
       {open && (
         <div className="rr-stage-content">
           {stage.notes && <p>{stage.notes}</p>}
+          <NotebookBacklinks target={{kind: 'stage', id: stage.id}} />
           {active && (
             <label className="rr-active-variant">
               Aktive Variante
@@ -68,6 +70,7 @@ export default function RouteStageCard({
             </label>
           )}
           {active?.notes && <p>{active.notes}</p>}
+          {active && <NotebookBacklinks target={{kind: 'variant', id: active.id}} />}
           {children}
           <button className="rr-text-action" onClick={() => onAdd(stage.active_variant_id)}>
             <Plus size={15} /> Stopp hinzufügen
@@ -79,6 +82,7 @@ export default function RouteStageCard({
                 <div className="rr-alternative" key={variant.id}>
                   <strong>{variant.name}</strong>
                   {variant.notes && <p>{variant.notes}</p>}
+                  <NotebookBacklinks target={{kind: 'variant', id: variant.id}} />
                   {stops
                     .filter((stop) => !stop.saved && stop.variant_id === variant.id)
                     .map((stop, index, siblings) => (

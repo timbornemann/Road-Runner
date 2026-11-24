@@ -31,6 +31,7 @@ import { activeRoute, api, dateLabel, Modal, navUrl, type RouteStage, type Stop,
 import { TagChips, TagEditor, tripTags, useTagView } from './Tags'
 import StageManager from './StageManager'
 import RouteStageCard from './RouteStageCard'
+import { NotebookBacklinks, useNotebookNavigation } from './NotebookNavigation'
 import './route.css'
 
 const kinds = {
@@ -250,6 +251,7 @@ function StopEditor({
   suggestions,
   onClose,
   afterSave,
+  createLinked,
 }: {
   stop?: Stop
   initial: StopDraft
@@ -257,7 +259,8 @@ function StopEditor({
   stages: RouteStage[]
   suggestions: string[]
   onClose: () => void
-  afterSave: () => Promise<void>
+  afterSave?: () => Promise<void>
+  createLinked?: (fields: object) => Promise<void>
 }) {
   const [draft, setDraft] = useState(initial)
   const [error, setError] = useState('')
@@ -299,7 +302,7 @@ function StopEditor({
     setSaving(true)
     setError('')
     try {
-      await api('/api/trips/' + tripId + '/stops' + (stop ? '/' + stop.id : ''), stop ? 'PATCH' : 'POST', {
+      const fields = {
         title: draft.title.trim(),
         stage_id: draft.plan === 'saved' ? null : draft.stage_id,
         variant_id: draft.plan === 'saved' ? null : draft.variant_id,
@@ -314,8 +317,10 @@ function StopEditor({
         end_date: fixed && draft.kind === 'sleep' ? draft.end_date || null : null,
         tags: draft.tags,
         ...(draft.plan === 'saved' ? { done: false } : {}),
-      })
-      await afterSave()
+      }
+      if (createLinked) await createLinked(fields)
+      else await api('/api/trips/' + tripId + '/stops' + (stop ? '/' + stop.id : ''), stop ? 'PATCH' : 'POST', fields)
+      await afterSave?.()
       onClose()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Der Ort konnte nicht gespeichert werden.')
@@ -507,16 +512,27 @@ interface RouteProps {
   onJournal: (stop: Stop) => void
 }
 
+export function NewNotebookStop({ data, createLinked, onClose }: {
+  data: TripData; createLinked: (fields: object) => Promise<void>; onClose: () => void
+}) {
+  return <StopEditor initial={draftFor(undefined, true)} tripId={data.trip.id} stages={data.stages}
+    suggestions={tripTags(data)} createLinked={createLinked} onClose={onClose} />
+}
+
 export default function Route({ data, reload, notify, onJournal }: RouteProps) {
+  const { target, open } = useNotebookNavigation()
   const [tab, setTab] = useState<'route' | 'saved'>('route')
   const [viewMode, setViewMode] = useState<'sequence' | 'days'>('sequence')
   const [mobilePane, setMobilePane] = useState<'list' | 'map'>('list')
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [remove, setRemove] = useState<Stop | null>(null)
-  const [selected, setSelected] = useState<Stop | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(target?.kind === 'stop' ? target.id : null)
+  const selected = data.stops.find(stop => stop.id === selectedId)
+  const setSelected = (stop: Stop | null) => setSelectedId(stop?.id ?? null)
+  const areas = selected && data.notebook.areas.filter(area => area.stop_ids.includes(selected.id))
   const [dragging, setDragging] = useState<number | null>(null)
   const [working, setWorking] = useState(false)
-  const [manageStages, setManageStages] = useState(false)
+  const [manageStages, setManageStages] = useState(target?.kind === 'stage' || target?.kind === 'variant')
   const allStops = useMemo(() => ordered(data.stops), [data.stops])
   const route = useMemo(() => activeRoute(data), [data])
   const saved = useMemo(() => allStops.filter((stop) => stop.saved), [allStops])
@@ -886,6 +902,10 @@ export default function Route({ data, reload, notify, onJournal }: RouteProps) {
               {selected.done && <span>Besucht</span>}
             </div>
             <TagChips tags={selected.tags} />
+            <NotebookBacklinks target={{ kind: 'stop', id: selected.id }} />
+            {!!areas?.length && <div className="notebook-backlinks"><span>Gebiete</span>
+              {areas.map(area => <button key={area.id} onClick={() => open({kind: 'area', id: area.id})}>{area.name}</button>)}
+            </div>}
             {(selected.date || selected.time) && (
               <p>
                 <CalendarDays size={17} />
