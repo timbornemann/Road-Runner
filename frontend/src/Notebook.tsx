@@ -474,7 +474,7 @@ export default function Notebook({ data, target, onOpen, reload, notify }: Props
               {area.stop_ids.length ? (
                 <EntryList>
                   {area.stop_ids.map((id) => {
-                    const stop = data.stops.find((s) => s.id === id)
+                    const stop = data.places.find((s) => s.id === id)
                     return (
                       stop && (
                         <EntryButton

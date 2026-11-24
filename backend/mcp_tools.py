@@ -93,8 +93,13 @@ def _active_route(stops, trip_stages):
 def _brief(stop):
     if stop is None:
         return None
-    return {key: stop[key] for key in ("id", "title", "kind", "date", "time", "end_date", "address",
+    return {key: stop[key] for key in ("id", "place_id", "title", "kind", "date", "time", "end_date", "address",
                                        "stage_id", "variant_id")}
+
+
+def _wishlist(stops):
+    planned = {s["place_id"] for s in stops if not s["saved"]}
+    return [s for s in stops if s["id"] == s["place_id"] and s["id"] not in planned]
 
 
 def get_trip(trip_id: PositiveId) -> dict[str, Any]:
@@ -109,7 +114,9 @@ def get_trip(trip_id: PositiveId) -> dict[str, Any]:
                                   (trip_id,)).fetchall())
         counts["stages"] = len(trip_stages)
         counts["itinerary"] = len(route)
-        counts["wishlist"] = sum(1 for stop in stops if stop["saved"])
+        counts["wishlist"] = len(_wishlist(stops))
+        counts["places"] = sum(s["id"] == s["place_id"] for s in stops)
+        counts["visits"] = sum(not s["saved"] for s in stops)
         counts["journal"] = con.execute("SELECT count(*) FROM journal_entries WHERE trip_id=?", (trip_id,)).fetchone()[0]
         costs = store.records(con, trip_id, "expenses")
     # SQLite stores cents. Sum only the shared ledger so linked purchases and rides count once.
@@ -171,7 +178,7 @@ def read_trip_section(trip_id: PositiveId, section: Section, offset: Offset = 0,
         elif section in ("itinerary", "wishlist"):
             stops = store.records(con, trip_id, "stops")
             items = (_active_route(stops, stages.stage_data(con, trip_id)) if section == "itinerary"
-                     else [s for s in stops if s["saved"]])
+                     else _wishlist(stops))
         else:
             items = store.records(con, trip_id, section)
     if tag is not None:

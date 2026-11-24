@@ -94,7 +94,7 @@ class NotebookTools(unittest.IsolatedAsyncioTestCase):
         page = await self.call("list_notebook_links", kind="note", item_id=note["id"], offset=1, limit=1)
         self.assertEqual((page["total"], page["items"][0]["id"], page["next_offset"]), (3, purchase["link"]["id"], 2))
         exported = self.web.get(self.url + "/export").json()
-        self.assertEqual(exported["schema_version"], 4)
+        self.assertEqual(exported["schema_version"], 5)
         book = exported["notebook"]
         self.assertEqual(book, self.web.get(self.url).json()["notebook"])
         self.assertEqual(book["topics"], [topic])

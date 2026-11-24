@@ -342,7 +342,7 @@ export function AreaEditor({ data, close, saved, area }: EditorProps & { area?: 
   const [name, setName] = useState(area?.name ?? '')
   const [query, setQuery] = useState('')
   const [ids, setIds] = useState(area?.stop_ids ?? [])
-  const filtered = data.stops.filter((s) =>
+  const filtered = data.places.filter((s) =>
     s.title.toLocaleLowerCase('de').includes(query.trim().toLocaleLowerCase('de')),
   )
   async function submit() {
@@ -361,7 +361,7 @@ export function AreaEditor({ data, close, saved, area }: EditorProps & { area?: 
       </label>
       <div>
         <h3>Orte im Gebiet</h3>
-        {data.stops.length ? (
+        {data.places.length ? (
           <>
             <label className="nb-search">
               <Search size={15} />

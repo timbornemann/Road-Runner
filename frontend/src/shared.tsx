@@ -21,6 +21,7 @@ interface Item {
   tags: string[]
 }
 export interface Stop extends Item {
+  place_id: number
   title: string
   kind: 'stop' | 'sleep' | 'sight'
   date: string | null
@@ -108,6 +109,8 @@ export interface ShoppingItem extends PantryItem {
   expense_id: number | null
 }
 export interface TripData {
+  places: Place[]
+  visits: Visit[]
   notebook: NotebookData
   trip: Trip
   stops: Stop[]
@@ -120,6 +123,23 @@ export interface TripData {
   expenses: Expense[]
   pantry: PantryItem[]
 }
+
+export interface Place extends Item {
+  title: string
+  category: string
+  address: string
+  lat: number | null
+  lon: number | null
+  description: string
+  links: { label: string; url: string }[]
+  icon_type: 'emoji' | 'lucide'
+  icon: string
+  osm_type: 'node' | 'way' | 'relation' | null
+  osm_id: number | null
+  image: { filename: string; mime_type: string; size: number; url: string } | null
+}
+
+export type Visit = Pick<Stop, 'id' | 'trip_id' | 'place_id' | 'kind' | 'date' | 'time' | 'end_date' | 'done' | 'position' | 'stage_id' | 'variant_id'>
 
 export function activeRoute({ stages, stops }: TripData): Stop[] {
   const byId = new Map<number | null, RouteStage>(stages.map((stage) => [stage.id, stage]))
@@ -169,7 +189,7 @@ export function dateLabel(date: string) {
     year: 'numeric',
   })
 }
-export function navUrl(stop: Stop) {
+export function navUrl(stop: Pick<Stop, 'title' | 'address' | 'lat' | 'lon'>) {
   const target =
     stop.lat != null && stop.lon != null ? [stop.lat, stop.lon].join(',') : stop.address || stop.title
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(target)

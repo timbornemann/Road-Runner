@@ -82,6 +82,8 @@ class MCPClientTests(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual("create_trip" in names, not read_only)
                         self.assertIn("search_notebook", names)
                         self.assertEqual("update_notebook_note" in names, not read_only)
+                        self.assertIn("search_places", names)
+                        self.assertEqual("create_visit" in names, not read_only)
                         status = (await http.get("/api/integrations/mcp")).json()
                         self.assertEqual(set(status), {"enabled", "read_only", "revision"})
                         self.assertTrue(status["enabled"])

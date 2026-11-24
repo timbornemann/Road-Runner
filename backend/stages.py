@@ -95,13 +95,20 @@ def edit_stage(tid: int, sid: int, body: dict = Body(...)):
 
 def detach_stops(con, tid, stage, variant=None):
     # The chosen route stays in the itinerary. Unused alternatives become saved places.
-    for stop in store.records(con, tid, "stops"):
+    stops = store.records(con, tid, "stops")
+    order = {stop["id"]: index for index, stop in enumerate(stops)}
+    for stop in stops:
         if stop["stage_id"] != stage["id"] or (variant is not None and stop["variant_id"] != variant):
             continue
         unused = stop["variant_id"] is not None and stop["variant_id"] != stage["active_variant_id"]
+        if unused and store.SCHEMA_VERSION >= 5:
+            from . import places
+            places.unschedule(con, tid, stop)
+            continue
         store.put(con, tid, "stops", {**stop, "variant_id": None,
             "stage_id": None if variant is None or unused else stage["id"], "saved": stop["saved"] or unused})
-    store.write_stop_order(con, sorted(store.records(con, tid, "stops"), key=lambda stop: stop["saved"]))
+    remaining = sorted(store.records(con, tid, "stops"), key=lambda s: (s["saved"], order[s["id"]]))
+    store.write_stop_order(con, remaining)
 
 
 @router.delete("/{sid}", status_code=204)

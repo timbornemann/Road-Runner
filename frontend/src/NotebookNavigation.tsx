@@ -22,7 +22,8 @@ export const targetPages = {
   topic: 'notebook',
   note: 'notebook',
   area: 'notebook',
-  stop: 'route',
+  stop: 'places',
+  visit: 'route',
   stage: 'route',
   variant: 'route',
   purchase: 'purchases',
@@ -34,19 +35,21 @@ export const targetPages = {
 } as const
 
 export function hashDestination() {
-  const [page, kind, rawId, rawTrip] = location.hash.slice(1).split('/')
+  const [rawPage, kind, rawId, rawTrip] = location.hash.slice(1).split('/')
+  const page = rawPage === 'route' && kind === 'stop' ? 'places' : rawPage
   const id = Number(rawId)
   if (
     !Object.hasOwn(targetPages, kind) ||
-    targetPages[kind as NotebookKind] !== page ||
+    targetPages[kind as NotebookTarget['kind']] !== page ||
     !Number.isSafeInteger(id) ||
     id <= 0
   )
     return null
-  return { target: { kind: kind as NotebookKind, id }, tripId: Number(rawTrip) || undefined }
+  return { page: targetPages[kind as NotebookTarget['kind']], target: { kind: kind as NotebookTarget['kind'], id }, tripId: Number(rawTrip) || undefined }
 }
 
 export interface NamedTarget extends NotebookTarget {
+  kind: NotebookKind
   title: string
   detail: string
   backlinks: NotebookLink[]
@@ -64,7 +67,7 @@ export function targetIndex(data: TripData | null) {
   topics.forEach((t) => add('topic', t.id, t.title, trail(t.parent_id)))
   notes.forEach((n) => add('note', n.id, n.title, trail(n.topic_id)))
   areas.forEach((a) => add('area', a.id, a.name))
-  data.stops.forEach((s) => add('stop', s.id, s.title, s.address))
+  data.places.forEach((p) => add('stop', p.id, p.title, p.address))
   data.stages.forEach((s) => {
     add('stage', s.id, s.name)
     s.variants.forEach((v) => add('variant', v.id, v.name, s.name))

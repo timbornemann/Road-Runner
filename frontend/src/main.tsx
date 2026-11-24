@@ -37,10 +37,12 @@ import { api, type Stop, type Trip, type TripData } from './shared'
 
 const Notebook = lazy(() => import('./Notebook'))
 const Journal = lazy(() => import('./Journal'))
+const Places = lazy(() => import('./Places'))
 const items = [
   { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
   { id: 'notebook', label: 'Planungsheft', icon: NotebookTabs },
-  { id: 'route', label: 'Route & Orte', icon: RouteIcon },
+  { id: 'route', label: 'Routenplanung', icon: RouteIcon },
+  { id: 'places', label: 'Ortekarte', icon: MapPinned },
   { id: 'journal', label: 'Reisetagebuch', icon: BookOpen },
   { id: 'purchases', label: 'Anschaffungen', icon: Package },
   { id: 'pantry', label: 'Vorräte & Einkauf', icon: ShoppingBasket },
@@ -48,6 +50,8 @@ const items = [
   { id: 'finance', label: 'Finanzen', icon: WalletCards },
 ] as const
 function hashPage(): Page {
+  const destination = hashDestination()
+  if (destination) return destination.page
   const id = location.hash.slice(1).split('/')[0]
   return items.find((item) => item.id === id)?.id ?? 'overview'
 }
@@ -327,6 +331,12 @@ function App() {
             ) : page === 'notebook' ? (
               <Suspense fallback={<p role="status">Planungsheft wird geladen …</p>}>
                 <Notebook key={data.trip.id} data={data} reload={reload} notify={notify} target={target} onOpen={openRecord} />
+              </Suspense>
+            ) : page === 'places' ? (
+              <Suspense fallback={<p role="status">Ortekarte wird geladen …</p>}>
+                <Places key={data.trip.id} data={data} reload={reload} notify={notify}
+                  initialPlaceId={target?.kind === 'stop' ? target.id : undefined}
+                  onOpenVisit={id => openRecord({kind: 'visit', id})} />
               </Suspense>
             ) : page === 'route' ? (
               <RouteView

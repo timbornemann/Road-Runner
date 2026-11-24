@@ -21,7 +21,7 @@ COLLECTIONS = {
 }
 COSTED = {"purchases", "mobility"}
 MONEY_FIELDS = {"budget", "estimated_cost", "amount", "base_amount"}
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def data_file():
@@ -74,9 +74,13 @@ def initialize():
             from . import journal
             journal.migrate(con)
             stages.migrate(con)
-        if version < 4:
+        if version < 4 <= SCHEMA_VERSION:
             from . import notebook_schema
             notebook_schema.migrate(con)
+        if version < 5 <= SCHEMA_VERSION:
+            from . import geo_services, places
+            places.migrate(con)
+            geo_services.migrate(con)
         if version == 0:
             from .seed import seed_demo
             seed_demo(con)
@@ -118,6 +122,8 @@ def unpack(row):
     result["id"] = row["id"]
     if "trip_id" in row.keys():
         result["trip_id"] = row["trip_id"]
+    if "collection" in row.keys() and row["collection"] == "stops" and SCHEMA_VERSION >= 5:
+        result.setdefault("place_id", result["id"])
     return result
 
 
@@ -194,13 +200,26 @@ def record(con, tid, group, rid):
 
 
 def aggregate(con, tid):
-    from . import journal, notebook
-    return {"trip": trip(con, tid), **journal.trip_data(con, tid), **{group: records(con, tid, group) for group in COLLECTIONS},
+    from . import journal, notebook, places
+    collections = {group: records(con, tid, group) for group in COLLECTIONS}
+    atlas = {"places": places.place_rows(con, tid), "visits": [places.visit(s) for s in collections["stops"] if not s["saved"]]} if SCHEMA_VERSION >= 5 else {}
+    return {"trip": trip(con, tid), **journal.trip_data(con, tid), **collections, **atlas,
             "stages": stages.stage_data(con, tid), "notebook": notebook.trip_data(con, tid)}
+
+
+def place_ids(con, tid, stop_ids):
+    """Canonicalise old visit IDs before keeping a durable geographic reference."""
+    ids = []
+    for sid in stop_ids:
+        stop = record(con, tid, "stops", sid)
+        ids.append(stop.get("place_id", sid))
+    return list(dict.fromkeys(ids))
 
 
 def put(con, tid, group, data):
     rid = data.get("id")
+    if group == "stops" and data.get("place_id") == rid and "place_id" in data:
+        data = {k: v for k, v in data.items() if k != "place_id"}
     if rid is None:
         rid = con.execute("INSERT INTO records(trip_id,collection,data) VALUES(?,?,?)",
                           (tid, group, encoded(data))).lastrowid
@@ -232,7 +251,7 @@ def inventory_key(item):
     return (item["name"].strip().casefold(), item["unit"].strip().casefold())
 
 
-def upsert(con, tid, group, values, rid=None):
+def upsert(con, tid, group, values, rid=None, *, place_id=None):
     if group not in COLLECTIONS:
         raise HTTPException(404, "Bereich nicht gefunden.")
     journey = trip(con, tid)
@@ -242,8 +261,12 @@ def upsert(con, tid, group, values, rid=None):
     data = validated(COLLECTIONS[group], values, original)
     if group == "stops":
         stages.validate_stop(con, tid, data)
+        linked_id = place_id or original.get("place_id")
+        if linked_id is not None and linked_id != rid:
+            data["place_id"] = linked_id
     if group == "mobility" and data["stop_id"] is not None:
-        record(con, tid, "stops", data["stop_id"])
+        linked_stop = record(con, tid, "stops", data["stop_id"])
+        data["stop_id"] = linked_stop.get("place_id", linked_stop["id"])
     if group == "shopping":
         data["manual"] = True
         data["expense_id"] = original.get("expense_id")
@@ -271,6 +294,9 @@ def upsert(con, tid, group, values, rid=None):
             data["paid"] = False
     saved = put(con, tid, group, {**data, "id": rid})
     if group == "stops":
+        if SCHEMA_VERSION >= 5:
+            from . import places
+            places.track_stop_write(con, saved, original, values, place_id is not None)
         added_to_group = not original or saved["saved"] != original["saved"]
         if added_to_group or saved["position"] != original["position"]:
             stops = [s for s in records(con, tid, "stops") if s["id"] != saved["id"]]
@@ -333,6 +359,17 @@ def remove(con, tid, group, rid):
             if line["expense_id"] == rid:
                 put(con, tid, "shopping", {**line, "expense_id": None})
     if group == "stops":
+        if SCHEMA_VERSION >= 5 and original["place_id"] == rid:
+            from . import places
+            others = [s for s in places.linked_stops(con, tid, rid) if s["id"] != rid]
+            if not original["saved"] and any(not s["saved"] for s in others):
+                places.unschedule(con, tid, original)
+                return
+            if any(not s["saved"] for s in others):
+                raise HTTPException(409, "Der Ort wird noch in der Route verwendet.")
+            # Legacy clients may have moved a repeated visit into their wishlist.
+            for alias in others:
+                remove(con, tid, "stops", alias["id"])
         for ride in records(con, tid, "mobility"):
             if ride["stop_id"] == rid:
                 put(con, tid, "mobility", {**ride, "stop_id": None})

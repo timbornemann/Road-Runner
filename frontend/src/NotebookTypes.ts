@@ -12,7 +12,7 @@ export type NotebookKind =
   | 'expense'
   | 'journal'
 export interface NotebookTarget {
-  kind: NotebookKind
+  kind: NotebookKind | 'visit'
   id: number
 }
 export interface NotebookSource {

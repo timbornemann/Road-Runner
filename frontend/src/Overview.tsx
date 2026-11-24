@@ -27,7 +27,7 @@ import { TripMap } from './Route'
 import { activeRoute, localDate, money, navUrl, type Stop, type TripData } from './shared'
 import { tripDates, tripStatus } from './Trips'
 
-export type Page = 'overview' | 'notebook' | 'route' | 'journal' | 'purchases' | 'pantry' | 'finance' | 'mobility'
+export type Page = 'overview' | 'notebook' | 'places' | 'route' | 'journal' | 'purchases' | 'pantry' | 'finance' | 'mobility'
 type Actions = {
   data: TripData
   go: (page: Page) => void

@@ -204,8 +204,8 @@ export default function StageManager({
         <>
           <p>
             „{screen.target.type === 'stage' ? screen.target.stage?.name : screen.target.variant?.name}“
-            löschen? Stopps der aktiven Route bleiben eingeplant. Orte aus entfernten, inaktiven Varianten
-            kommen auf die Merkliste.
+            löschen? Besuche der aktiven Route bleiben eingeplant. Die Orte aus entfernten,
+            inaktiven Varianten findest du auf der Ortekarte.
           </p>
           <div className="actions">
             <button

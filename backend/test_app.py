@@ -43,7 +43,7 @@ class TravelAPI(unittest.TestCase):
         demo_path = f"/api/trips/{demo['id']}"
         demo_data = self.client.get(demo_path).json()
         self.assertGreaterEqual(len(demo_data["stops"]), 6)
-        self.assertEqual(self.client.get("/api/health").json()["schema_version"], 4)
+        self.assertEqual(self.client.get("/api/health").json()["schema_version"], 5)
         for group in store.COLLECTIONS:
             self.assertTrue(demo_data[group])
             self.assertTrue(all(isinstance(entry["tags"], list) for entry in demo_data[group]))
@@ -154,7 +154,7 @@ class TravelAPI(unittest.TestCase):
         export = self.client.get(self.path + "/export")
         self.assertTrue(export.headers["content-disposition"].startswith("attachment"))
         payload = export.json()
-        self.assertEqual(payload["schema_version"], 4)
+        self.assertEqual(payload["schema_version"], 5)
         self.assertEqual([s["id"] for s in payload["stops"]], order)
         self.assertEqual(payload["mobility"][0]["expense_id"], payload["expenses"][0]["id"])
         self.assertEqual(self.client.delete(self.path + f"/stops/{b['id']}").status_code, 204)
@@ -239,7 +239,7 @@ class TravelAPI(unittest.TestCase):
                 con.execute("UPDATE records SET data=json_set(data, '$.position', ?) WHERE id=?", (pos, item["id"]))
             con.execute("PRAGMA user_version=1")
         with TestClient(app) as upgraded:
-            self.assertEqual(upgraded.get("/api/health").json()["schema_version"], 4)
+            self.assertEqual(upgraded.get("/api/health").json()["schema_version"], 5)
             data = upgraded.get(self.path).json()
             self.assertEqual([item["id"] for item in data["stops"]], [item["id"] for item in [d, c, a, b, s]])
             self.assertEqual([item["position"] for item in data["stops"]], list(range(5)))

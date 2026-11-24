@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, Request, Response
 from pydantic import Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
-from . import journal_media, models, store
+from . import journal_media, models, places, store
 
 
 router = APIRouter()
@@ -82,8 +82,8 @@ def trip_data(con, tid):
 
 def save_links(con, tid, eid, stop_ids):
     con.execute("DELETE FROM journal_places WHERE entry_id=?", (eid,))
-    for index, sid in enumerate(dict.fromkeys(stop_ids)):
-        store.record(con, tid, "stops", sid)
+    ids = store.place_ids(con, tid, stop_ids)
+    for index, sid in enumerate(ids):
         con.execute("INSERT INTO journal_places(entry_id,stop_id,position) VALUES(?,?,?)", (eid, sid, index))
 
 
@@ -157,7 +157,7 @@ def list_favorites():
 @router.put("/api/trips/{tid}/favorites/{sid}", status_code=204)
 def add_favorite(tid: int, sid: int):
     with store.session(True) as con:
-        store.record(con, tid, "stops", sid)
+        sid = store.place_ids(con, tid, [sid])[0]
         con.execute("INSERT OR IGNORE INTO favorite_stops(stop_id) VALUES(?)", (sid,))
     return Response(status_code=204)
 
@@ -165,7 +165,7 @@ def add_favorite(tid: int, sid: int):
 @router.delete("/api/trips/{tid}/favorites/{sid}", status_code=204)
 def remove_favorite(tid: int, sid: int):
     with store.session(True) as con:
-        store.record(con, tid, "stops", sid)
+        sid = store.place_ids(con, tid, [sid])[0]
         con.execute("DELETE FROM favorite_stops WHERE stop_id=?", (sid,))
     return Response(status_code=204)
 
@@ -174,18 +174,25 @@ def remove_favorite(tid: int, sid: int):
 def copy_favorite(tid: int, sid: int):
     with store.session(True) as con:
         store.trip(con, tid)
-        row = con.execute("SELECT r.* FROM favorite_stops f JOIN records r ON r.id=f.stop_id WHERE f.stop_id=?",
-                          (sid,)).fetchone()
+        row = con.execute("""SELECT r.* FROM records handle JOIN favorite_stops f
+            ON f.stop_id=COALESCE(json_extract(handle.data,'$.place_id'),handle.id)
+            JOIN records r ON r.id=f.stop_id WHERE handle.collection='stops' AND handle.id=?""", (sid,)).fetchone()
         if not row:
             raise HTTPException(404, "Lieblingsplatz nicht gefunden.")
         source = store.unpack(row)
+        sid = source["id"]
         if source["trip_id"] == tid:
             return source
         previous = con.execute("SELECT stop_id FROM favorite_copies WHERE trip_id=? AND source_stop_id=?",
                                (tid, sid)).fetchone()
         if previous:
             return store.record(con, tid, "stops", previous["stop_id"])
-        place = {k: source[k] for k in ("title", "kind", "address", "lat", "lon", "notes", "tags")}
-        result = store.upsert(con, tid, "stops", {**place, "saved": True})
+        source_place = places.place_row(con, source["trip_id"], sid)
+        fields = {k: source_place[k] for k in places.Place.model_fields}
+        dest, created = places.save_place(con, tid, fields)
+        if created:
+            con.execute("""INSERT INTO place_images(place_id,filename,mime_type,size,content)
+                SELECT ?,filename,mime_type,size,content FROM place_images WHERE place_id=?""", (dest["id"], sid))
+        result = store.record(con, tid, "stops", dest["id"])
         con.execute("INSERT INTO favorite_copies(trip_id,source_stop_id,stop_id) VALUES(?,?,?)", (tid, sid, result["id"]))
         return result

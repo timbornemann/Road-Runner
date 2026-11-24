@@ -40,7 +40,7 @@ export function JournalEditor({
   const [date, setDate] = useState(entry?.date || initialDate || localDate())
   const [title, setTitle] = useState(entry?.title || '')
   const [text, setText] = useState(entry?.text || '')
-  const [stopIds, setStopIds] = useState(entry?.stop_ids || (initialStop ? [initialStop.id] : []))
+  const [stopIds, setStopIds] = useState(entry?.stop_ids || (initialStop ? [initialStop.place_id] : []))
   const [search, setSearch] = useState('')
   const [favoriteChanges, setFavoriteChanges] = useState<Record<number, boolean>>({})
   const [media, setMedia] = useState(entry?.media || [])
@@ -52,7 +52,7 @@ export function JournalEditor({
   const saving = useRef(false)
   const savedChanges = useRef(false)
   const base = '/api/trips/' + data.trip.id
-  const selected = data.stops.filter((stop) => stopIds.includes(stop.id))
+  const selected = data.places.filter((place) => stopIds.includes(place.id))
 
   function close() {
     if (saving.current) return
@@ -152,7 +152,7 @@ export function JournalEditor({
     }
   }
 
-  const matching = data.stops.filter((stop) =>
+  const matching = data.places.filter((stop) =>
     stop.title.toLocaleLowerCase('de').includes(search.trim().toLocaleLowerCase('de')),
   )
   return (
@@ -184,7 +184,7 @@ export function JournalEditor({
               onChange={(event) => setText(event.target.value)}
             />
           </label>
-          {data.stops.length > 0 && (
+          {data.places.length > 0 && (
             <details className="journal-place-picker">
               <summary>
                 <MapPin size={16} /> Orte verknüpfen {stopIds.length > 0 && <span>({stopIds.length})</span>}
@@ -237,7 +237,7 @@ export function JournalEditor({
                       onClick={() => setFavoriteChanges((current) => ({ ...current, [stop.id]: !favorite }))}
                     >
                       <Heart size={14} fill={favorite ? 'currentColor' : 'none'} />
-                      {stop.kind === 'sleep' ? 'Hier würde ich wieder schlafen' : 'Lieblingsplatz'}
+                      {['Schlafplatz', 'Campingplatz', 'Unterkunft'].includes(stop.category) ? 'Hier würde ich wieder schlafen' : 'Lieblingsplatz'}
                     </button>
                   </div>
                 )

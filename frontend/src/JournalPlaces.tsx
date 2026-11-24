@@ -10,7 +10,8 @@ const placeKinds = {
 }
 
 export function JournalMap({ data, open }: { data: TripData; open: (stop: Stop) => void }) {
-  const places = data.stops.filter((stop) => stop.done)
+  const visited = new Set(data.visits.filter(visit => visit.done).map(visit => visit.place_id))
+  const places = data.stops.filter(stop => stop.id === stop.place_id && visited.has(stop.id))
   const mapped = places.filter((stop) => stop.lat != null && stop.lon != null)
   return (
     <section className="journal-panel">
@@ -109,7 +110,7 @@ export function FavoritePlaces({
     try {
       if (copy) {
         await api('/api/trips/' + data.trip.id + '/favorites/' + favorite.stop.id + '/copy', 'POST')
-        notify('Ort auf der Merkliste dieser Reise gespeichert')
+        notify('Ort auf der Ortekarte dieser Reise gespeichert')
       } else {
         await api('/api/trips/' + favorite.trip_id + '/favorites/' + favorite.stop.id, 'DELETE')
         notify('Aus den Lieblingsplätzen entfernt')
@@ -203,7 +204,7 @@ export function FavoritePlaces({
                   onClick={() => void action(favorite, true)}
                 >
                   {copied ? <Check size={15} /> : <ListPlus size={15} />}
-                  {copied ? 'In dieser Reise gespeichert' : 'Auf die Merkliste dieser Reise'}
+                  {copied ? 'In dieser Reise gespeichert' : 'Auf die Ortekarte dieser Reise'}
                 </button>
               )}
             </article>

@@ -144,8 +144,8 @@ class SnapshotResponse(StreamingResponse):
             self.connection.close()
 
 
-def read_blob(con, mid, start, count):
-    with con.blobopen("journal_media", "content", mid, readonly=True) as blob:
+def read_blob(con, mid, start, count, table="journal_media"):
+    with con.blobopen(table, "content", mid, readonly=True) as blob:
         blob.seek(start)
         while count:
             chunk = blob.read(min(count, CHUNK))
@@ -206,6 +206,15 @@ def export_chunks(con, data):
             first = False
             yield f'"{media["id"]}":"'
             for chunk in read_blob(con, media["id"], 0, media["size"]):
+                yield base64.b64encode(chunk)
+            yield '"'
+    if "places" in data:
+        yield '},"place_image_content":{'
+        for index, place in enumerate(p for p in data["places"] if p["image"]):
+            if index:
+                yield ","
+            yield f'"{place["id"]}":"'
+            for chunk in read_blob(con, place["id"], 0, place["image"]["size"], "place_images"):
                 yield base64.b64encode(chunk)
             yield '"'
     yield "}}"

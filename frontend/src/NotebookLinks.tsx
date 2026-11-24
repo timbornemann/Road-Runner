@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, Link2, MapPinPlus, PackagePlus, Plus, Search, X } from 'lucide-react'
-import { api, Modal } from './shared'
-import { NewNotebookStop } from './Route'
+import { api, Modal, type Place } from './shared'
+import PlaceEditor from './PlaceEditor'
 import { PurchaseForm } from './modules/Purchases'
 import { ModuleContext } from './modules/context'
 import { kindLabels, NotebookBacklinks, useNotebookNavigation } from './NotebookNavigation'
@@ -62,12 +62,6 @@ export function NotebookLinks({
     } finally {
       setBusy(false)
     }
-  }
-  async function create(target_type: 'stop' | 'purchase', fields: unknown) {
-    await api(path + '/create-target', 'POST', { ...sourceFields, target_type, fields })
-    await refresh(
-      target_type === 'stop' ? 'Ort angelegt und verknüpft.' : 'Anschaffung angelegt und verknüpft.',
-    )
   }
   const close = () => setDialog(null)
   return (
@@ -174,11 +168,17 @@ export function NotebookLinks({
         </Modal>
       )}
       {dialog === 'stop' && (
-        <NewNotebookStop data={data} onClose={close} createLinked={(fields) => create('stop', fields)} />
+        <PlaceEditor data={data} onClose={close}
+          createLinked={async fields => (await api<{target: Place}>(path + '/create-target', 'POST',
+            { ...sourceFields, target_type: 'place', fields })).target}
+          onSaved={async () => { await refresh('Ort angelegt und verknüpft.'); close() }} />
       )}
       {dialog === 'purchase' && (
         <ModuleContext.Provider
-          value={{ data, save: (_path, _method, fields) => create('purchase', fields) }}
+          value={{ data, save: async (_path, _method, fields) => {
+            await api(path + '/create-target', 'POST', { ...sourceFields, target_type: 'purchase', fields })
+            await refresh('Anschaffung angelegt und verknüpft.')
+          } }}
         >
           <PurchaseForm onClose={close} />
         </ModuleContext.Provider>

@@ -164,7 +164,7 @@ class NotebookAPI(unittest.TestCase):
         self.assertEqual(len(data["links"]), len(targets) + 1)
         with TestClient(app) as restarted:
             export = restarted.get(self.path + "/export").json()
-            self.assertEqual(export["schema_version"], 4)
+            self.assertEqual(export["schema_version"], 5)
             self.assertEqual(export["notebook"], data)
         self.client.delete(self.path + f"/stages/{stage}").raise_for_status()
         self.client.delete(self.path + f"/stops/{stop}").raise_for_status()
@@ -219,7 +219,7 @@ class UpgradeNotebook(unittest.TestCase):
             self.assertNotIn("notebook_topics", tables)
             before = {table: con.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall() for table in tables}
         with TestClient(app) as upgraded:
-            self.assertEqual(upgraded.get("/api/health").json()["schema_version"], 4)
+            self.assertEqual(upgraded.get("/api/health").json()["schema_version"], 5)
             self.assertEqual(upgraded.get(path).json()["notebook"], EMPTY_BOOK)
             self.assertEqual(upgraded.get(entry["media"][0]["url"]).content, PNG)
             with store.session() as con:

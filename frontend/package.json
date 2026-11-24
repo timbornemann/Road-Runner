@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.0",
+    "@iconify-json/lucide": "1.2.159",
+    "emojibase-data": "18.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",

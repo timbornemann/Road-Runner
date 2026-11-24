@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import Field, model_validator
 
-from . import models, store
+from . import models, places, store
 
 
 router = APIRouter(prefix="/api/trips/{tid}/notebook")
@@ -74,7 +74,7 @@ class LinkCreate(Source):
 
 
 class LinkedTargetCreate(Source):
-    target_type: Literal["stop", "purchase"]
+    target_type: Literal["stop", "place", "purchase"]
     fields: dict
 
 
@@ -235,8 +235,7 @@ def delete_note(tid: int, id: int, revision: int | None = None):
 
 def set_area_stops(con, tid, area_id, ids):
     con.execute("DELETE FROM notebook_area_stops WHERE area_id=?", (area_id,))
-    for position, sid in enumerate(dict.fromkeys(ids)):
-        store.record(con, tid, "stops", sid)
+    for position, sid in enumerate(store.place_ids(con, tid, ids)):
         con.execute("INSERT INTO notebook_area_stops(area_id,stop_id,position) VALUES(?,?,?)",
                     (area_id, sid, position))
 
@@ -288,6 +287,8 @@ def target_title(con, tid, kind, id):
 
 
 def add_link(con, tid, body):
+    if body.target_type == "stop":
+        body = body.model_copy(update={"target_id": store.place_ids(con, tid, [body.target_id])[0]})
     target_title(con, tid, body.source_type, body.source_id)
     target_title(con, tid, body.target_type, body.target_id)
     if body.source_type == body.target_type and body.source_id == body.target_id:
@@ -308,9 +309,14 @@ def create_link(tid: int, body: LinkCreate):
 @router.post("/links/create-target", status_code=201)
 def create_target(tid: int, body: LinkedTargetCreate):
     with store.session(True) as con:
-        record = store.upsert(con, tid, RECORD_GROUPS[body.target_type], body.fields)
+        kind = body.target_type
+        if kind == "place":
+            record = places.save_place(con, tid, body.fields)[0]
+            kind = "stop"
+        else:
+            record = store.upsert(con, tid, RECORD_GROUPS[kind], body.fields)
         link = add_link(con, tid, LinkCreate(source_type=body.source_type, source_id=body.source_id,
-                        target_type=body.target_type, target_id=record["id"]))
+                        target_type=kind, target_id=record["id"]))
         return {"target": record, "link": link}
 
 

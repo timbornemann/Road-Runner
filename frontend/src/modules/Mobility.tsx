@@ -200,11 +200,11 @@ function RideForm({ item, fuel, onClose }: { item?: Ride; fuel?: boolean; onClos
             </Field>
           </>
         )}
-        {data.stops.length > 0 && (
+        {data.places.length > 0 && (
           <Field full label="Zugehöriger Stopp">
             <Select value={stop} onChange={setStop}>
               <option value="">Ohne Zuordnung</option>
-              {data.stops.map((s) => (
+              {data.places.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.title}
                 </option>
